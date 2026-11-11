@@ -9,9 +9,23 @@ if (!$session) {
 }
 $sid = (int)$session['id'];
 $publicId = $session['public_id'];
-$owner = owner_key_hash();
-$open = session_is_open($session);
 $self = url('s.php', ['id' => $publicId]);
+
+// 「あなた専用の編集URL」から来た場合: キーをこのブラウザに保存し、URLからキーを消す
+if (isset($_GET['me']) && is_string($_GET['me'])) {
+    if (is_valid_token($_GET['me'])) {
+        adopt_owner_token($session, $_GET['me']);
+        flash('success', 'このブラウザで、あなたの依頼を編集できるようになりました。');
+    } else {
+        flash('error', '編集用URLが正しくありません。');
+    }
+    redirect($self . '#mine');
+}
+
+$ownerToken = owner_token($session);
+$owner = hash('sha256', $ownerToken);
+$myEditUrl = url('s.php', ['id' => $publicId, 'me' => $ownerToken]);
+$open = session_is_open($session);
 
 $errors = [];
 $postedName = '';
@@ -58,7 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $st->execute([$sid, $postedName, $v['item_name'], $v['color'], $v['variant'], $v['quantity'], $v['unit_price'], $v['note'], $owner]);
             }
             $pdo->commit();
-            flash('success', count($valid) . '件の依頼を登録しました。');
+            flash('success', count($valid) . '件の依頼を登録しました。あとで編集するときのために、下の「あなた専用の編集URL」を保存しておいてください。');
             redirect($self . '#mine');
         }
     } elseif ($action === 'update' || $action === 'delete') {
@@ -204,7 +218,14 @@ render_header($session['title']);
     <?php if (count($mineByPerson) > 1): ?>
       <p class="grand-total">総合計 <?= (int)$mineTotal['quantity'] ?>点 <strong><?= yen($mineTotal['total']) ?></strong></p>
     <?php endif; ?>
-    <p class="muted small">※ここには、このブラウザから登録した依頼だけが表示されます。別の端末から登録した分の確認・変更は代行者に連絡してください。</p>
+    <div class="url-box edit-url-box">
+      <label><strong>あなた専用の編集URL</strong></label>
+      <div class="copy-row">
+        <input type="text" readonly value="<?= h($myEditUrl) ?>" data-select-on-focus>
+        <button type="button" class="btn btn-primary btn-sm" data-copy="<?= h($myEditUrl) ?>">コピー</button>
+      </div>
+      <p class="muted small">別のスマホ・PCやブラウザで編集したいとき、履歴やCookieを消したときは、このURLを開くと自分の依頼を編集できます。LINEのKeepメモやブックマークに保存しておくと安心です。<strong>他の人には教えないでください</strong>（このURLを知っている人はあなたの依頼を変更できます）。<?php if (!$open): ?><br>※受付終了後は編集できません。変更は代行者に連絡してください。<?php endif; ?></p>
+    </div>
   <?php endif; ?>
 </section>
 <?php if ($showAll): ?>

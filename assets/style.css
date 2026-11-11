@@ -163,3 +163,5 @@ input:focus, textarea:focus { outline: 2px solid var(--primary); outline-offset:
 .item-summary summary { cursor: pointer; margin-bottom: 8px; }
 label.checkbox { display: flex; gap: 8px; align-items: center; font-weight: 400; }
 label.checkbox input { width: 18px; height: 18px; margin: 0; }
+.edit-url-box { background: var(--primary-soft); border-radius: 12px; padding: 12px; margin-top: 16px; }
+.edit-url-box p { margin: 8px 0 0; }

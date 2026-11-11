@@ -146,28 +146,66 @@ function csrf_check(): void
     }
 }
 
-// ---------------------------------------------------------------- 依頼者のブラウザ識別
+// ---------------------------------------------------------------- 依頼者の識別
 
-/**
- * ブラウザごとのキー（Cookie）。自分が登録した依頼だけ編集・削除できるようにする。
- * DBにはハッシュのみ保存。
+/*
+ * 依頼者の「編集キー」はセッションごとにランダム発行し、Cookie（zonbi_o_<共有ID>）に保存する。
+ * DB にはハッシュのみ保存。キーを含む「あなた専用の編集URL」を開けば、別の端末でも同じ依頼を編集できる。
  */
-function owner_key_hash(): string
+
+function is_valid_token(string $t): bool
 {
-    $key = $_COOKIE['zonbi_owner'] ?? '';
-    if (!preg_match('/^[0-9a-f]{64}$/', $key)) {
-        $key = random_hex(32);
-        $_COOKIE['zonbi_owner'] = $key;
-    }
-    // 毎回期限を延長（1年）
-    setcookie('zonbi_owner', $key, [
+    return (bool)preg_match('/^[0-9a-f]{64}$/', $t);
+}
+
+function owner_cookie_name(array $session): string
+{
+    return 'zonbi_o_' . $session['public_id'];
+}
+
+function set_owner_cookie(array $session, string $token): void
+{
+    $_COOKIE[owner_cookie_name($session)] = $token;
+    setcookie(owner_cookie_name($session), $token, [
         'expires'  => time() + 60 * 60 * 24 * 365,
         'path'     => '/',
         'httponly' => true,
         'secure'   => is_https(),
         'samesite' => 'Lax',
     ]);
-    return hash('sha256', $key);
+}
+
+/** このブラウザの、このセッション用の編集キー（なければ発行） */
+function owner_token(array $session): string
+{
+    $token = (string)($_COOKIE[owner_cookie_name($session)] ?? '');
+    if (is_valid_token($token)) {
+        set_owner_cookie($session, $token); // 期限延長
+        return $token;
+    }
+    $token = random_hex(32);
+    // 旧方式（全セッション共通Cookie）で登録した依頼を新しいキーに引き継ぐ
+    $legacy = (string)($_COOKIE['zonbi_owner'] ?? '');
+    if (is_valid_token($legacy)) {
+        db()->prepare('UPDATE shop_entries SET owner_key = ? WHERE session_id = ? AND owner_key = ?')
+            ->execute([hash('sha256', $token), $session['id'], hash('sha256', $legacy)]);
+    }
+    set_owner_cookie($session, $token);
+    return $token;
+}
+
+/**
+ * 編集URLのキーをこのブラウザに取り込む。
+ * このブラウザで既に登録していた依頼があれば、編集URL側のキーにまとめる。
+ */
+function adopt_owner_token(array $session, string $newToken): void
+{
+    $current = (string)($_COOKIE[owner_cookie_name($session)] ?? '');
+    if (is_valid_token($current) && !hash_equals($current, $newToken)) {
+        db()->prepare('UPDATE shop_entries SET owner_key = ? WHERE session_id = ? AND owner_key = ?')
+            ->execute([hash('sha256', $newToken), $session['id'], hash('sha256', $current)]);
+    }
+    set_owner_cookie($session, $newToken);
 }
 
 // ---------------------------------------------------------------- 入力
