@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS shop_entries (
   color           VARCHAR(100) NOT NULL DEFAULT '' COMMENT '2. 色',
   variant         VARCHAR(100) NOT NULL DEFAULT '' COMMENT '2. 型',
   quantity        INT UNSIGNED NOT NULL COMMENT '3. 何個',
-  unit_price      INT UNSIGNED NOT NULL COMMENT '4. 単価（円）',
+  unit_price      INT UNSIGNED NULL COMMENT '4. 単価（円）。NULL=未定',
   note            VARCHAR(500) NOT NULL DEFAULT '',
   is_purchased    TINYINT(1)   NOT NULL DEFAULT 0 COMMENT '代行者用: 購入済み',
   owner_key       CHAR(64)     NOT NULL COMMENT '登録したブラウザのキー(SHA-256)',

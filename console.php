@@ -337,7 +337,7 @@ render_header('運営者コンソール', 'console');
           <td><?= h($e['requester_name']) ?></td>
           <td><?= h($e['item_name']) ?> <span class="muted small"><?= h(item_label($e)) ?></span><?php if ($e['note'] !== ''): ?><div class="note"><?= h($e['note']) ?></div><?php endif; ?></td>
           <td class="num"><?= (int)$e['quantity'] ?></td>
-          <td class="num"><?= yen($e['unit_price']) ?></td>
+          <td class="num"><?= price_html($e['unit_price']) ?></td>
           <td><?= flags_html($e['flag_words']) ?><?= $e['flag_words'] !== '' && $e['reviewed_at'] !== null ? '<div class="note">確認済</div>' : '' ?></td>
           <td class="small mono"><?= h($e['created_at']) ?><br><?= h($e['created_ip']) ?><?= $e['updated_ip'] !== '' && $e['updated_ip'] !== $e['created_ip'] ? '<br>更新: ' . h($e['updated_ip']) : '' ?></td>
           <td class="row-actions">

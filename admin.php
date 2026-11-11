@@ -205,7 +205,7 @@ render_header('管理: ' . $session['title'], 'admin');
     <div><span>依頼者</span><strong><?= $sum['people'] ?>人</strong></div>
     <div><span>依頼件数</span><strong><?= $sum['count'] ?>件</strong></div>
     <div><span>総個数</span><strong><?= $sum['quantity'] ?>点</strong></div>
-    <div><span>総額</span><strong><?= yen($sum['total']) ?></strong></div>
+    <div><span>総額</span><strong><?= total_html($sum['total'], $sum['unpriced']) ?></strong></div>
   </div>
 
   <div class="actions">
@@ -264,7 +264,7 @@ render_header('管理: ' . $session['title'], 'admin');
   <section class="card person-card">
     <div class="person-head">
       <h2><?= h($p['name']) ?> さん</h2>
-      <div class="person-total"><?= $p['quantity'] ?>点 <strong><?= yen($p['total']) ?></strong></div>
+      <div class="person-total"><?= $p['quantity'] ?>点 <strong><?= total_html($p['total'], $p['unpriced']) ?></strong></div>
     </div>
     <div class="table-wrap">
     <table class="table">
@@ -289,7 +289,7 @@ render_header('管理: ' . $session['title'], 'admin');
           <td><?= h(item_label($it)) ?></td>
           <td class="num"><strong><?= $it['quantity'] ?></strong></td>
           <td class="num"><?= $it['purchased'] ?></td>
-          <td class="num"><?= yen($it['unit_price']) ?></td>
+          <td class="num"><?= price_html($it['unit_price']) ?></td>
           <td class="num"><?= yen($it['total']) ?></td>
           <td class="small"><?php
             $parts = [];
@@ -301,7 +301,7 @@ render_header('管理: ' . $session['title'], 'admin');
         </tr>
       <?php endforeach; ?>
       </tbody>
-      <tfoot><tr><th colspan="2">合計</th><th class="num"><?= $sum['quantity'] ?></th><th></th><th></th><th class="num"><?= yen($sum['total']) ?></th><th></th></tr></tfoot>
+      <tfoot><tr><th colspan="2">合計</th><th class="num"><?= $sum['quantity'] ?></th><th></th><th></th><th class="num"><?= total_html($sum['total'], $sum['unpriced']) ?></th><th></th></tr></tfoot>
     </table>
     </div>
   </section>
@@ -313,7 +313,7 @@ render_header('管理: ' . $session['title'], 'admin');
       <tbody>
       <?php foreach ($entries as $e) { admin_entry_row($e, $self, $base, true); } ?>
       </tbody>
-      <tfoot><tr><th colspan="4">合計</th><th class="num"><?= $sum['quantity'] ?></th><th></th><th class="num"><?= yen($sum['total']) ?></th><th></th></tr></tfoot>
+      <tfoot><tr><th colspan="4">合計</th><th class="num"><?= $sum['quantity'] ?></th><th></th><th class="num"><?= total_html($sum['total'], $sum['unpriced']) ?></th><th></th></tr></tfoot>
     </table>
     </div>
   </section>
@@ -381,8 +381,8 @@ function admin_entry_row(array $e, string $self, array $base, bool $showName): v
   <td><?= h($e['item_name']) ?><?php if ($e['note'] !== ''): ?><div class="note"><?= h($e['note']) ?></div><?php endif; ?></td>
   <td><?= h(item_label($e)) ?></td>
   <td class="num"><?= (int)$e['quantity'] ?></td>
-  <td class="num"><?= yen($e['unit_price']) ?></td>
-  <td class="num"><?= yen((int)$e['quantity'] * (int)$e['unit_price']) ?></td>
+  <td class="num"><?= price_html($e['unit_price']) ?></td>
+  <td class="num"><?= line_total_html($e) ?></td>
   <td class="row-actions">
     <a class="btn btn-ghost btn-sm" href="<?= h(url('admin.php', $base + ['view' => $_GET['view'] ?? 'person', 'edit' => $id])) ?>#edit">編集</a>
     <form method="post" action="<?= h($self) ?>" data-confirm="<?= h($e['requester_name'] . ' さんの「' . $e['item_name'] . '」を削除しますか？') ?>">

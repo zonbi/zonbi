@@ -257,8 +257,13 @@ function validate_entry(array $row, array &$errors, string $label = ''): ?array
     if ($e['quantity'] === null || $e['quantity'] < 1 || $e['quantity'] > 9999) {
         $errors[] = $label . '個数は 1〜9999 の数字で入力してください。';
     }
-    if ($e['unit_price'] === null || $e['unit_price'] > 10000000) {
-        $errors[] = $label . '単価は 0〜10,000,000 の数字（円）で入力してください。';
+    // 単価は任意（空欄＝未定）
+    $rawPrice = is_string($row['unit_price'] ?? null) ? trim($row['unit_price']) : '';
+    if ($rawPrice !== '' && ($e['unit_price'] === null || $e['unit_price'] > 10000000)) {
+        $errors[] = $label . '単価は 0〜10,000,000 の数字（円）で入力するか、空欄にしてください。';
+    }
+    if ($rawPrice === '') {
+        $e['unit_price'] = db_price(null);
     }
     return count($errors) === $before ? $e : null;
 }
@@ -322,16 +327,46 @@ function fetch_entries(int $sessionId, ?string $ownerHash = null): array
     return $st->fetchAll();
 }
 
+/** 単価が未定（NULL）でも保存できるか（005 のSQL適用済みか）。未適用なら未定は0円として保存 */
+function db_price(?int $price): ?int
+{
+    static $nullable = null;
+    if ($price !== null) {
+        return $price;
+    }
+    if ($nullable === null) {
+        try {
+            $col = db()->query("SHOW COLUMNS FROM shop_entries LIKE 'unit_price'")->fetch();
+            $nullable = $col && strtoupper((string)$col['Null']) === 'YES';
+        } catch (PDOException $e) {
+            $nullable = false;
+        }
+    }
+    return $nullable ? null : 0;
+}
+
+function has_price(array $e): bool
+{
+    return isset($e['unit_price']) && $e['unit_price'] !== '' && $e['unit_price'] !== null;
+}
+
+/** 小計（単価未定なら null） */
+function line_total(array $e): ?int
+{
+    return has_price($e) ? (int)$e['quantity'] * (int)$e['unit_price'] : null;
+}
+
 /** 依頼者ごとにまとめる */
 function group_by_person(array $entries): array
 {
     $out = [];
     foreach ($entries as $e) {
         $name = $e['requester_name'];
-        $out[$name] ??= ['name' => $name, 'entries' => [], 'quantity' => 0, 'total' => 0];
+        $out[$name] ??= ['name' => $name, 'entries' => [], 'quantity' => 0, 'total' => 0, 'unpriced' => 0];
         $out[$name]['entries'][] = $e;
         $out[$name]['quantity'] += (int)$e['quantity'];
-        $out[$name]['total'] += (int)$e['quantity'] * (int)$e['unit_price'];
+        $out[$name]['total'] += (int)line_total($e);
+        $out[$name]['unpriced'] += has_price($e) ? 0 : 1;
     }
     return array_values($out);
 }
@@ -341,17 +376,19 @@ function group_by_item(array $entries): array
 {
     $out = [];
     foreach ($entries as $e) {
-        $k = mb_strtolower($e['item_name'] . "\0" . $e['color'] . "\0" . $e['variant'] . "\0" . $e['unit_price']);
+        $k = mb_strtolower($e['item_name'] . "\0" . $e['color'] . "\0" . $e['variant'] . "\0" . (has_price($e) ? $e['unit_price'] : '-'));
         $out[$k] ??= [
             'item_name' => $e['item_name'], 'color' => $e['color'], 'variant' => $e['variant'],
-            'unit_price' => (int)$e['unit_price'], 'quantity' => 0, 'purchased' => 0, 'total' => 0, 'people' => [],
+            'unit_price' => has_price($e) ? (int)$e['unit_price'] : null, 'quantity' => 0, 'purchased' => 0, 'total' => 0,
+            'unpriced' => 0, 'people' => [],
         ];
         $q = (int)$e['quantity'];
         $out[$k]['quantity'] += $q;
         if ((int)$e['is_purchased'] === 1) {
             $out[$k]['purchased'] += $q;
         }
-        $out[$k]['total'] += $q * (int)$e['unit_price'];
+        $out[$k]['total'] += (int)line_total($e);
+        $out[$k]['unpriced'] += has_price($e) ? 0 : 1;
         $out[$k]['people'][$e['requester_name']] = ($out[$k]['people'][$e['requester_name']] ?? 0) + $q;
     }
     $out = array_values($out);
@@ -364,12 +401,14 @@ function summarize(array $entries): array
     $people = [];
     $qty = 0;
     $total = 0;
+    $unpriced = 0;
     foreach ($entries as $e) {
         $people[$e['requester_name']] = true;
         $qty += (int)$e['quantity'];
-        $total += (int)$e['quantity'] * (int)$e['unit_price'];
+        $total += (int)line_total($e);
+        $unpriced += has_price($e) ? 0 : 1;
     }
-    return ['people' => count($people), 'count' => count($entries), 'quantity' => $qty, 'total' => $total];
+    return ['people' => count($people), 'count' => count($entries), 'quantity' => $qty, 'total' => $total, 'unpriced' => $unpriced];
 }
 
 /** 依頼一覧を記入者全員に公開しているか */

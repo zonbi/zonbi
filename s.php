@@ -205,8 +205,8 @@ render_header($session['title']);
             <td><?= h($e['item_name']) ?><?php if ($e['note'] !== ''): ?><div class="note"><?= h($e['note']) ?></div><?php endif; ?></td>
             <td><?= h(item_label($e)) ?></td>
             <td class="num"><?= (int)$e['quantity'] ?></td>
-            <td class="num"><?= yen($e['unit_price']) ?></td>
-            <td class="num"><?= yen((int)$e['quantity'] * (int)$e['unit_price']) ?></td>
+            <td class="num"><?= price_html($e['unit_price']) ?></td>
+            <td class="num"><?= line_total_html($e) ?></td>
             <?php if ($open): ?>
             <td class="row-actions">
               <a class="btn btn-ghost btn-sm" href="<?= h(url('s.php', ['id' => $publicId, 'edit' => $e['id']])) ?>">編集</a>
@@ -221,12 +221,12 @@ render_header($session['title']);
           </tr>
         <?php endforeach; ?>
         </tbody>
-        <tfoot><tr><th colspan="2">合計</th><th class="num"><?= (int)$p['quantity'] ?></th><th></th><th class="num"><?= yen($p['total']) ?></th><?php if ($open): ?><th></th><?php endif; ?></tr></tfoot>
+        <tfoot><tr><th colspan="2">合計</th><th class="num"><?= (int)$p['quantity'] ?></th><th></th><th class="num"><?= total_html($p['total'], $p['unpriced']) ?></th><?php if ($open): ?><th></th><?php endif; ?></tr></tfoot>
       </table>
       </div>
     <?php endforeach; ?>
     <?php if (count($mineByPerson) > 1): ?>
-      <p class="grand-total">総合計 <?= (int)$mineTotal['quantity'] ?>点 <strong><?= yen($mineTotal['total']) ?></strong></p>
+      <p class="grand-total">総合計 <?= (int)$mineTotal['quantity'] ?>点 <strong><?= total_html($mineTotal['total'], $mineTotal['unpriced']) ?></strong></p>
     <?php endif; ?>
     <div class="url-box edit-url-box">
       <label><strong>あなた専用の編集URL</strong></label>
@@ -248,12 +248,12 @@ render_header($session['title']);
       <div><span>依頼者</span><strong><?= $allSum['people'] ?>人</strong></div>
       <div><span>依頼件数</span><strong><?= $allSum['count'] ?>件</strong></div>
       <div><span>総個数</span><strong><?= $allSum['quantity'] ?>点</strong></div>
-      <div><span>総額</span><strong><?= yen($allSum['total']) ?></strong></div>
+      <div><span>総額</span><strong><?= total_html($allSum['total'], $allSum['unpriced']) ?></strong></div>
     </div>
     <?php foreach (group_by_person($all) as $p): ?>
       <div class="person-head person-head-sub">
         <h3><?= h($p['name']) ?> さん</h3>
-        <div class="person-total"><?= $p['quantity'] ?>点 <strong><?= yen($p['total']) ?></strong></div>
+        <div class="person-total"><?= $p['quantity'] ?>点 <strong><?= total_html($p['total'], $p['unpriced']) ?></strong></div>
       </div>
       <div class="table-wrap">
       <table class="table">
@@ -264,8 +264,8 @@ render_header($session['title']);
             <td><?= h($e['item_name']) ?><?php if (hash_equals($e['owner_key'], $owner)): ?> <span class="badge badge-mine">あなた</span><?php endif; ?><?php if ($e['note'] !== ''): ?><div class="note"><?= h($e['note']) ?></div><?php endif; ?></td>
             <td><?= h(item_label($e)) ?></td>
             <td class="num"><?= (int)$e['quantity'] ?></td>
-            <td class="num"><?= yen($e['unit_price']) ?></td>
-            <td class="num"><?= yen((int)$e['quantity'] * (int)$e['unit_price']) ?></td>
+            <td class="num"><?= price_html($e['unit_price']) ?></td>
+            <td class="num"><?= line_total_html($e) ?></td>
             <td><?= (int)$e['is_purchased'] === 1 ? '✓ 購入済' : '' ?></td>
           </tr>
         <?php endforeach; ?>
@@ -285,7 +285,7 @@ render_header($session['title']);
             <td><?= h($it['item_name']) ?></td>
             <td><?= h(item_label($it)) ?></td>
             <td class="num"><?= $it['quantity'] ?></td>
-            <td class="num"><?= yen($it['unit_price']) ?></td>
+            <td class="num"><?= price_html($it['unit_price']) ?></td>
             <td class="num"><?= yen($it['total']) ?></td>
           </tr>
         <?php endforeach; ?>

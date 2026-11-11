@@ -21,7 +21,7 @@ PHP + MySQL だけで動くので、CoreServer などのレンタルサーバー
   1. 誰が（お名前）
   2. 何を（商品名・色・型）
   3. 何個
-  4. 単価 → 小計と合計が自動計算
+  4. 単価（任意。空欄なら「未定」として合計から除外し「＋単価未定○件」と表示）→ 小計と合計が自動計算
 - 「＋ 商品を追加」で複数商品をまとめて依頼
 - 自分が登録した依頼はあとから編集・削除できる（締切後は不可）
   - 登録後に表示される **「あなた専用の編集URL」** を開けば、別のスマホ・PC・ブラウザからでも編集できる
@@ -174,6 +174,7 @@ sql/schema.sql   テーブル作成SQL
 | `sql/migrations/002_add_event_url.sql` | 「イベントURL」欄の列を追加 |
 | `sql/migrations/003_add_google_login.sql` | 代行者のGoogleログイン用のテーブル・列を追加 |
 | `sql/migrations/004_add_moderation.sql` | 運営者コンソール・危険ワード検知・通報・登録時の記録 |
+| `sql/migrations/005_unit_price_optional.sql` | 単価を任意入力に（空欄＝未定） |
 
 新しく設置する場合は `sql/schema.sql` だけでOKです（上記は含まれています）。
 

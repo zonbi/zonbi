@@ -109,8 +109,8 @@ function render_entry_fields(string $prefix, array $v = [], bool $removable = fa
     <label>個数 <span class="req">必須</span>
       <input type="number" name="<?= h($n('quantity')) ?>" value="<?= h($qty) ?>" min="1" max="9999" inputmode="numeric" data-qty>
     </label>
-    <label>単価（円） <span class="req">必須</span>
-      <input type="number" name="<?= h($n('unit_price')) ?>" value="<?= h($price) ?>" min="0" max="10000000" inputmode="numeric" placeholder="例: 1500" data-price>
+    <label>単価（円）
+      <input type="number" name="<?= h($n('unit_price')) ?>" value="<?= h($price) ?>" min="0" max="10000000" inputmode="numeric" placeholder="未定なら空欄" data-price>
     </label>
     <label class="span-2">メモ
       <input type="text" name="<?= h($n('note')) ?>" value="<?= h($v['note'] ?? '') ?>" maxlength="500" placeholder="例: 売り切れなら不要 / 第2希望は赤">
@@ -185,4 +185,23 @@ function ad_slot(string $name, string $class): string
         return '';
     }
     return '<aside class="ad ' . h($class) . ' ad-' . h($name) . '" aria-label="広告"><span class="ad-label">PR</span><div class="ad-body">' . $html . '</div></aside>';
+}
+
+/** 単価の表示（未定なら「未定」） */
+function price_html($price): string
+{
+    return ($price === null || $price === '') ? '<span class="tbd">未定</span>' : h(yen($price));
+}
+
+/** 小計の表示 */
+function line_total_html(array $e): string
+{
+    $t = line_total($e);
+    return $t === null ? '<span class="tbd">未定</span>' : h(yen($t));
+}
+
+/** 合計の表示（単価未定を含む場合は注記） */
+function total_html(int $total, int $unpriced): string
+{
+    return h(yen($total)) . ($unpriced > 0 ? '<span class="tbd-note">＋単価未定' . $unpriced . '件</span>' : '');
 }

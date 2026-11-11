@@ -20,17 +20,24 @@
     var nextIndex = rowsBox ? rowsBox.querySelectorAll('[data-entry-row]').length : 0;
 
     function recalc() {
-      var total = 0;
+      var total = 0, unpriced = 0;
       form.querySelectorAll('[data-entry-row]').forEach(function (row) {
         if (row.closest('template')) return;
         var q = toNum((row.querySelector('[data-qty]') || {}).value);
-        var p = toNum((row.querySelector('[data-price]') || {}).value);
-        var sub = q * p;
-        total += sub;
+        var priceRaw = String((row.querySelector('[data-price]') || {}).value || '').trim();
         var out = row.querySelector('[data-row-total]');
+        if (priceRaw === '') {
+          // 単価未定（商品名が入っている行だけ数える）
+          var name = row.querySelector('input[name$="[item_name]"], input[name="item_name"]');
+          if (name && name.value.trim() !== '') unpriced++;
+          if (out) out.textContent = '単価未定';
+          return;
+        }
+        var sub = q * toNum(priceRaw);
+        total += sub;
         if (out) out.textContent = yen(sub);
       });
-      if (formTotal) formTotal.textContent = yen(total);
+      if (formTotal) formTotal.textContent = yen(total) + (unpriced ? '＋単価未定' + unpriced + '件' : '');
       form.querySelectorAll('[data-remove-row]').forEach(function (b) {
         b.hidden = rowsBox && rowsBox.querySelectorAll('[data-entry-row]').length <= 1;
       });

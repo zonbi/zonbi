@@ -13,13 +13,13 @@ $entries = fetch_entries((int)$session['id']);
 $rows = [];
 switch ($type) {
     case 'person':
-        $rows[] = ['依頼者', '点数', '合計金額', '内訳'];
+        $rows[] = ['依頼者', '点数', '合計金額', '単価未定の件数', '内訳'];
         foreach (group_by_person($entries) as $p) {
             $detail = array_map(
-                fn($e) => $e['item_name'] . ($e['color'] !== '' ? "（{$e['color']}）" : '') . ($e['variant'] !== '' ? "［{$e['variant']}］" : '') . '×' . $e['quantity'],
+                fn($e) => $e['item_name'] . ($e['color'] !== '' ? "（{$e['color']}）" : '') . ($e['variant'] !== '' ? "［{$e['variant']}］" : '') . '×' . $e['quantity'] . (has_price($e) ? '' : '（単価未定）'),
                 $p['entries']
             );
-            $rows[] = [$p['name'], $p['quantity'], $p['total'], implode(' / ', $detail)];
+            $rows[] = [$p['name'], $p['quantity'], $p['total'], $p['unpriced'], implode(' / ', $detail)];
         }
         break;
     case 'item':
@@ -29,7 +29,7 @@ switch ($type) {
             foreach ($it['people'] as $n => $q) {
                 $people[] = "{$n}×{$q}";
             }
-            $rows[] = [$it['item_name'], $it['color'], $it['variant'], $it['unit_price'], $it['quantity'], $it['purchased'], $it['total'], implode(' / ', $people)];
+            $rows[] = [$it['item_name'], $it['color'], $it['variant'], $it['unit_price'] ?? '未定', $it['quantity'], $it['purchased'], $it['unit_price'] === null ? '' : $it['total'], implode(' / ', $people)];
         }
         break;
     default:
@@ -37,7 +37,7 @@ switch ($type) {
         foreach ($entries as $i => $e) {
             $rows[] = [
                 $i + 1, $e['requester_name'], $e['item_name'], $e['color'], $e['variant'],
-                $e['quantity'], $e['unit_price'], (int)$e['quantity'] * (int)$e['unit_price'],
+                $e['quantity'], has_price($e) ? $e['unit_price'] : '未定', line_total($e) ?? '',
                 $e['note'], (int)$e['is_purchased'] === 1 ? '済' : '', $e['created_at'],
             ];
         }
