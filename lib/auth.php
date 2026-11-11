@@ -253,3 +253,9 @@ function login_url(string $returnTo = ''): string
 {
     return url('login.php', $returnTo !== '' ? ['return_to' => $returnTo] : []);
 }
+
+/** 管理用URLのキー、またはログインした持ち主として、このセッションを管理できるか */
+function can_manage_session(array $session, string $key): bool
+{
+    return is_admin_key_valid($session, $key) || is_session_owner($session);
+}

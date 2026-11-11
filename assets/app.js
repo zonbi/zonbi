@@ -98,6 +98,25 @@
     t.classList.add('stack');
   });
 
+  // ---- 似た商品まとめ：選択数の表示と「新しいまとめ名」欄
+  var bar = document.querySelector('[data-regroup-bar]');
+  if (bar) {
+    var countEl = bar.querySelector('[data-pick-count]');
+    var sel = bar.querySelector('[data-target]');
+    var newLabel = bar.querySelector('[data-new-label]');
+    var update = function () {
+      var n = document.querySelectorAll('[data-pick]:checked').length;
+      countEl.textContent = n;
+      bar.classList.toggle('is-active', n > 0);
+    };
+    document.addEventListener('change', function (ev) { if (ev.target.matches('[data-pick]')) update(); });
+    sel.addEventListener('change', function () {
+      newLabel.hidden = sel.value !== '__new__';
+      if (!newLabel.hidden) newLabel.focus();
+    });
+    update();
+  }
+
   // ---- 確認ダイアログ
   document.querySelectorAll('form[data-confirm]').forEach(function (f) {
     f.addEventListener('submit', function (ev) {

@@ -55,6 +55,7 @@ CREATE TABLE IF NOT EXISTS shop_entries (
   quantity        INT UNSIGNED NOT NULL COMMENT '3. 何個',
   unit_price      INT UNSIGNED NULL COMMENT '4. 単価（円）。NULL=未定',
   note            VARCHAR(500) NOT NULL DEFAULT '',
+  group_label     VARCHAR(200) NULL COMMENT '似た商品まとめ: 代行者が付けたまとめ名',
   is_purchased    TINYINT(1)   NOT NULL DEFAULT 0 COMMENT '代行者用: 購入済み',
   owner_key       CHAR(64)     NOT NULL COMMENT '登録したブラウザのキー(SHA-256)',
   created_ip      VARCHAR(45)  NOT NULL DEFAULT '' COMMENT '登録時のIPアドレス',

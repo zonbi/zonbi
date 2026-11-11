@@ -26,6 +26,7 @@ require __DIR__ . '/views.php';
 require __DIR__ . '/auth.php';
 require __DIR__ . '/moderation.php';
 require __DIR__ . '/related.php';
+require __DIR__ . '/grouping.php';
 
 // ---------------------------------------------------------------- 基本
 

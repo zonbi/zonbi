@@ -386,3 +386,52 @@ a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px soli
   .copy-row input { flex-basis: 100%; }
   .copy-row .btn { width: 100%; }
 }
+
+/* ---- 似た商品まとめ（items.php） ---- */
+.items-link { margin: 0 0 12px; }
+.items-link .btn { width: 100%; }
+@media (min-width: 641px) { .items-link .btn { width: auto; } }
+.btn.is-on { background: var(--primary-soft); border-color: var(--primary); color: var(--primary); }
+.group-card { scroll-margin-top: 70px; }
+.group-card.is-done { opacity: .65; }
+.group-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.group-title { min-width: 0; }
+.group-title h2 { margin: 0 0 6px; font-size: 1.15rem; overflow-wrap: anywhere; }
+.group-total { text-align: right; flex: none; min-width: 120px; }
+.group-total strong { font-size: 2.2rem; line-height: 1; color: var(--primary); font-variant-numeric: tabular-nums; }
+.group-total > span { margin-left: 2px; font-weight: 700; }
+.progress { height: 6px; background: var(--line); border-radius: 999px; overflow: hidden; margin: 6px 0 2px; }
+.progress i { display: block; height: 100%; background: var(--ok); border-radius: 999px; }
+.spellings, .variant-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; }
+.spellings span { font-size: .75rem; color: var(--muted); background: var(--bg); border: 1px dashed var(--line); border-radius: 999px; padding: 1px 10px; }
+.variant-chips span { font-size: .8rem; background: var(--primary-soft); color: var(--text); border-radius: 8px; padding: 3px 10px; }
+.variant-chips b { color: var(--primary); }
+.badge-manual { background: var(--primary-soft); color: var(--primary); font-size: .65rem; }
+.group-tools { margin-top: 10px; font-size: .85rem; }
+.group-tools summary { cursor: pointer; color: var(--muted); }
+.group-tools-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.group-tools-row input { margin: 0; flex: 1 1 220px; }
+.regroup-bar {
+  position: sticky; bottom: 0; z-index: 15; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  margin: 8px -4px 0; padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+  background: var(--header-bg, var(--card)); border: 1px solid var(--line); border-radius: var(--radius) var(--radius) 0 0;
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); box-shadow: 0 -6px 24px rgba(0,0,0,.08);
+  visibility: hidden; opacity: 0; transform: translateY(12px); transition: opacity .2s, transform .2s, visibility .2s;
+}
+.regroup-bar.is-active { visibility: visible; opacity: 1; transform: none; }
+.regroup-bar select, .regroup-bar input { flex: 1 1 180px; margin: 0; padding: 9px 12px; font-size: 15px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--input-bg, var(--card)); color: var(--text); }
+.regroup-count { font-size: .85rem; white-space: nowrap; }
+@media (max-width: 640px) {
+  .group-table.stack tbody td:nth-child(1) { grid-column: 1 / -1; justify-content: flex-end; order: -1; padding: 0; }
+  .group-table.stack tbody td:nth-child(1)::before { content: "まとめ直す"; }
+  .group-table.stack tbody td:nth-child(3) { grid-column: 1 / -1; }
+  .group-head { flex-direction: column; gap: 4px; }
+  .group-total { text-align: left; width: 100%; }
+}
+@media print {
+  .site-header, .site-footer, .no-print, .ad, .layout > aside { display: none !important; }
+  body { background: #fff !important; color: #000; }
+  .card { box-shadow: none !important; border: 1px solid #ccc !important; break-inside: avoid; }
+  .group-total strong { color: #000; }
+  .table.stack thead { display: table-header-group !important; }
+}

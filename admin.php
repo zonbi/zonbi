@@ -251,6 +251,8 @@ render_header('管理: ' . $session['title'], 'admin');
 </section>
 <?php endif; ?>
 
+<p class="items-link"><a class="btn btn-primary" href="<?= h(url('items.php', $base)) ?>" target="_blank" rel="noopener">🧮 似た商品をまとめて合計個数を見る（別ウィンドウ）</a></p>
+
 <nav class="tabs">
   <a href="<?= h(url('admin.php', $base + ['view' => 'person'])) ?>" class="<?= $view === 'person' ? 'active' : '' ?>">依頼者別</a>
   <a href="<?= h(url('admin.php', $base + ['view' => 'item'])) ?>" class="<?= $view === 'item' ? 'active' : '' ?>">商品別（買い物リスト）</a>
