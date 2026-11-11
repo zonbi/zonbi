@@ -374,3 +374,26 @@ function session_shows_all(array $s): bool
 {
     return !empty($s['show_all']);
 }
+
+/** イベントURLの検証（http/https のみ許可）。問題なければ null、エラーなら文言を返す */
+function event_url_error(string $u): ?string
+{
+    if ($u === '') {
+        return null;
+    }
+    if (!preg_match('#^https?://#i', $u) || filter_var($u, FILTER_VALIDATE_URL) === false) {
+        return 'イベントURLは https:// から始まるURLを入力してください。';
+    }
+    return null;
+}
+
+/** event_url 列を保存（列がない古いDBではエラー文言を返す） */
+function save_event_url(int $sessionId, string $u): ?string
+{
+    try {
+        db()->prepare('UPDATE shop_sessions SET event_url = ? WHERE id = ?')->execute([$u === '' ? null : $u, $sessionId]);
+        return null;
+    } catch (PDOException $e) {
+        return 'イベントURLを保存できませんでした。phpMyAdmin で sql/migrations/002_add_event_url.sql を実行してください。';
+    }
+}

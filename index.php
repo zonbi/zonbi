@@ -3,16 +3,20 @@ declare(strict_types=1);
 require __DIR__ . '/lib/bootstrap.php';
 
 $errors = [];
-$form = ['title' => '', 'description' => '', 'deadline' => ''];
+$form = ['title' => '', 'description' => '', 'event_url' => '', 'deadline' => ''];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_check();
     $form['title'] = input_str($_POST, 'title', 100);
     $form['description'] = input_str($_POST, 'description', 2000);
+    $form['event_url'] = input_str($_POST, 'event_url', 500);
     $form['deadline'] = input_str($_POST, 'deadline', 20);
 
     if ($form['title'] === '') {
         $errors[] = 'タイトルを入力してください。';
+    }
+    if ($err = event_url_error($form['event_url'])) {
+        $errors[] = $err;
     }
     $deadline = null;
     if ($form['deadline'] !== '') {
@@ -37,6 +41,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($e->getCode() !== '23000' || $i === 4) {
                     throw $e;
                 }
+            }
+        }
+        if ($form['event_url'] !== '') {
+            $newId = (int)db()->lastInsertId();
+            if ($err = save_event_url($newId, $form['event_url'])) {
+                flash('error', $err);
             }
         }
         if (!empty($_POST['show_all'])) {
@@ -68,6 +78,9 @@ render_header(config('app_name', '推し活グッズ代行まとめ'));
     </label>
     <label>説明・注意事項
       <textarea name="description" rows="4" maxlength="2000" placeholder="例: 1人3点まで。手数料は1点100円。支払いは受け取り時に。"><?= h($form['description']) ?></textarea>
+    </label>
+    <label>イベントURL（任意）
+      <input type="url" name="event_url" value="<?= h($form['event_url']) ?>" maxlength="500" inputmode="url" placeholder="例: https://example.com/event/popup">
     </label>
     <label>受付締切（任意）
       <input type="datetime-local" name="deadline" value="<?= h($form['deadline']) ?>">

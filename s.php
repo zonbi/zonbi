@@ -123,6 +123,9 @@ render_header($session['title']);
   <?php if ($session['description'] !== null && $session['description'] !== ''): ?>
     <div class="description"><?= nl2br(h($session['description'])) ?></div>
   <?php endif; ?>
+  <?php if (!empty($session['event_url'])): ?>
+    <p class="event-url">🔗 イベント情報: <a href="<?= h($session['event_url']) ?>" target="_blank" rel="noopener noreferrer nofollow"><?= h($session['event_url']) ?></a></p>
+  <?php endif; ?>
   <p class="meta">
     <?php if ($session['deadline']): ?>
       受付締切: <strong><?= h(date('Y/m/d H:i', strtotime($session['deadline']))) ?></strong>

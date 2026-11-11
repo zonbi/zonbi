@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS shop_sessions (
   admin_key    CHAR(64)     NOT NULL COMMENT '管理キーのSHA-256',
   title        VARCHAR(100) NOT NULL,
   description  TEXT         NULL,
+  event_url    VARCHAR(500) NULL COMMENT 'イベントの公式URL',
   deadline     DATETIME     NULL COMMENT '受付締切',
   is_closed    TINYINT(1)   NOT NULL DEFAULT 0,
   show_all     TINYINT(1)   NOT NULL DEFAULT 0 COMMENT '1=依頼一覧を記入者全員に公開',

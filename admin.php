@@ -25,10 +25,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         case 'update_session':
             $title = input_str($_POST, 'title', 100);
             $desc = input_str($_POST, 'description', 2000);
+            $eventUrl = input_str($_POST, 'event_url', 500);
             $dl = input_str($_POST, 'deadline', 20);
             $deadline = null;
             if ($title === '') {
                 $errors[] = 'タイトルを入力してください。';
+            }
+            if ($err = event_url_error($eventUrl)) {
+                $errors[] = $err;
             }
             if ($dl !== '') {
                 $ts = strtotime($dl);
@@ -41,7 +45,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!$errors) {
                 db()->prepare('UPDATE shop_sessions SET title=?, description=?, deadline=? WHERE id=?')
                     ->execute([$title, $desc, $deadline, $sid]);
-                flash('success', 'セッション情報を更新しました。');
+                if (($eventUrl !== '' || !empty($session['event_url'])) && ($err = save_event_url($sid, $eventUrl))) {
+                    flash('error', $err);
+                } else {
+                    flash('success', 'セッション情報を更新しました。');
+                }
                 redirect($self);
             }
             break;
@@ -270,6 +278,9 @@ render_header('管理: ' . $session['title'], 'admin');
     </label>
     <label>説明・注意事項
       <textarea name="description" rows="4" maxlength="2000"><?= h($session['description'] ?? '') ?></textarea>
+    </label>
+    <label>イベントURL（任意）
+      <input type="url" name="event_url" value="<?= h($session['event_url'] ?? '') ?>" maxlength="500" inputmode="url" placeholder="例: https://example.com/event/popup">
     </label>
     <label>受付締切（任意）
       <input type="datetime-local" name="deadline" value="<?= $session['deadline'] ? h(date('Y-m-d\TH:i', strtotime($session['deadline']))) : '' ?>">
