@@ -23,6 +23,7 @@ function render_header(string $title, string $bodyClass = ''): void
 <title><?= h($title === $app ? $app : "$title | $app") ?></title>
 <link rel="stylesheet" href="<?= h(asset('assets/style.css')) ?>">
 </head>
+<?php $GLOBALS['show_ads'] = basename((string)($_SERVER['SCRIPT_NAME'] ?? '')) !== 'console.php'; ?>
 <body class="<?= h($bodyClass) ?>">
 <header class="site-header">
   <a class="brand" href="<?= h(url('index.php')) ?>">🛍️ <?= h($app) ?></a>
@@ -40,6 +41,8 @@ function render_header(string $title, string $bodyClass = ''): void
   </nav>
   <?php endif; ?>
 </header>
+<div class="layout">
+<?= $GLOBALS['show_ads'] ? ad_slot('left', 'ad-side') : '' ?>
 <main class="container">
 <?php foreach (take_flashes() as $f): ?>
   <div class="flash flash-<?= h($f['type']) ?>"><?= h($f['message']) ?></div>
@@ -50,6 +53,9 @@ function render_footer(): void
 {
     ?>
 </main>
+<?= $GLOBALS['show_ads'] ? ad_slot('right', 'ad-side') : '' ?>
+</div>
+<?= $GLOBALS['show_ads'] ? ad_slot('bottom', 'ad-bottom') : '' ?>
 <footer class="site-footer">
   <nav class="footer-links">
     <a href="<?= h(url('index.php')) ?>">トップ</a>
@@ -57,8 +63,8 @@ function render_footer(): void
     <a href="<?= h(url('privacy.php')) ?>">プライバシーポリシー</a>
     <a href="<?= h(url('about.php')) ?>">運営者情報</a>
   </nav>
-  <?php if (affiliate_enabled()): ?>
-  <p class="aff-disclosure">当サイトはアフィリエイトプログラムを利用しており、商品リンク（PR）経由の購入により運営者が収益を得ることがあります。<?php if (amazon_enabled()): ?><br>Amazonのアソシエイトとして、<?= h(operator('name') !== '' ? operator('name') : '当サイト運営者') ?>は適格販売により収入を得ています。<?php endif; ?></p>
+  <?php if (affiliate_enabled() || has_ad_slots()): ?>
+  <p class="aff-disclosure">当サイトはアフィリエイトプログラム等の広告を掲載しており、広告（PR）経由の購入により運営者が収益を得ることがあります。<?php if (amazon_enabled()): ?><br>Amazonのアソシエイトとして、<?= h(operator('name') !== '' ? operator('name') : '当サイト運営者') ?>は適格販売により収入を得ています。<?php endif; ?></p>
   <?php endif; ?>
   <p>© <?= date('Y') ?> <?= h(operator('name') !== '' ? operator('name') : config('app_name', '代行さん')) ?></p>
 </footer>
@@ -126,7 +132,7 @@ function item_label(array $e): string
     return $parts ? implode(' / ', $parts) : '—';
 }
 
-/** 商品ごとの「Amazon / 楽天で探す」リンク（設定がなければ何も出さない） */
+/** 商品ごとの「Amazon / 楽天で探す」リンク（設定がなければ何も出さない）。下部の「関連グッズを探す」欄で使用 */
 function affiliate_links(array $e): string
 {
     if (!affiliate_enabled()) {
@@ -144,5 +150,75 @@ function affiliate_links(array $e): string
     if (rakuten_enabled()) {
         $links[] = '<a class="aff aff-rakuten" href="' . h(rakuten_search_url($kw)) . '"' . $attr . '>楽天で探す</a>';
     }
-    return '<div class="aff-links"><span class="pr">PR</span>' . implode('', $links) . '</div>';
+    return '<span class="aff-links">' . implode('', $links) . '</span>';
+}
+
+// ---------------------------------------------------------------- 広告エリア
+
+/** ads/<name>.html の中身（運営者が貼るバナーコード）。なければ空文字 */
+function ad_html(string $name): string
+{
+    $file = dirname(__DIR__) . '/ads/' . $name . '.html';
+    if (!is_file($file)) {
+        return '';
+    }
+    $html = trim((string)file_get_contents($file));
+    // サンプルのコメントだけのファイルは空扱い
+    return trim(preg_replace('/<!--.*?-->/s', '', $html) ?? '') === '' ? '' : $html;
+}
+
+function has_ad_slots(): bool
+{
+    foreach (['left', 'right', 'bottom'] as $n) {
+        if (ad_html($n) !== '') {
+            return true;
+        }
+    }
+    return false;
+}
+
+/** 広告枠（左右・下部）。中身がなければ何も出さない */
+function ad_slot(string $name, string $class): string
+{
+    $html = ad_html($name);
+    if ($html === '') {
+        return '';
+    }
+    return '<aside class="ad ' . h($class) . ' ad-' . h($name) . '" aria-label="広告"><span class="ad-label">PR</span><div class="ad-body">' . $html . '</div></aside>';
+}
+
+/** ページ下部の「関連グッズを探す」欄（依頼された商品名からAmazon/楽天の検索リンクを自動作成） */
+function render_related_box(array $entries, int $limit = 8): void
+{
+    if (!affiliate_enabled() || !$entries) {
+        return;
+    }
+    $seen = [];
+    $items = [];
+    foreach ($entries as $e) {
+        $kw = affiliate_keyword($e);
+        $k = mb_strtolower($kw);
+        if ($kw === '' || isset($seen[$k])) {
+            continue;
+        }
+        $seen[$k] = true;
+        $items[] = $e;
+        if (count($items) >= $limit) {
+            break;
+        }
+    }
+    if (!$items) {
+        return;
+    }
+    ?>
+<section class="card related-box" aria-label="広告">
+  <h2><span class="ad-label">PR</span> 関連グッズを探す</h2>
+  <ul class="related-list">
+    <?php foreach ($items as $e): ?>
+      <li><span class="related-name"><?= h(affiliate_keyword($e)) ?></span><?= affiliate_links($e) ?></li>
+    <?php endforeach; ?>
+  </ul>
+  <p class="muted small">Amazon・楽天の検索結果へのリンクです。イベント限定品は取り扱いがない場合や、定価より高い転売品が表示される場合があります。</p>
+</section>
+<?php
 }

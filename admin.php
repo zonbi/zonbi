@@ -285,7 +285,7 @@ render_header('管理: ' . $session['title'], 'admin');
       <tbody>
       <?php foreach (group_by_item($entries) as $it): ?>
         <tr class="<?= $it['purchased'] >= $it['quantity'] ? 'done' : '' ?>">
-          <td><?= h($it['item_name']) ?><?= affiliate_links($it) ?></td>
+          <td><?= h($it['item_name']) ?></td>
           <td><?= h(item_label($it)) ?></td>
           <td class="num"><strong><?= $it['quantity'] ?></strong></td>
           <td class="num"><?= $it['purchased'] ?></td>
