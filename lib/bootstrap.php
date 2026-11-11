@@ -1,0 +1,332 @@
+<?php
+declare(strict_types=1);
+
+$configFile = __DIR__ . '/config.php';
+if (!is_file($configFile)) {
+    http_response_code(500);
+    header('Content-Type: text/plain; charset=UTF-8');
+    exit("lib/config.php がありません。lib/config.sample.php をコピーして DB 情報を設定してください。\n");
+}
+$GLOBALS['config'] = require $configFile;
+
+date_default_timezone_set(config('timezone', 'Asia/Tokyo'));
+mb_internal_encoding('UTF-8');
+
+session_name('zonbi_sid');
+session_set_cookie_params([
+    'lifetime' => 0,
+    'path'     => '/',
+    'httponly' => true,
+    'secure'   => is_https(),
+    'samesite' => 'Lax',
+]);
+session_start();
+
+require __DIR__ . '/views.php';
+
+// ---------------------------------------------------------------- 基本
+
+function config(string $key, $default = null)
+{
+    return $GLOBALS['config'][$key] ?? $default;
+}
+
+function is_https(): bool
+{
+    return (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https')
+        || (($_SERVER['SERVER_PORT'] ?? '') === '443');
+}
+
+function db(): PDO
+{
+    static $pdo = null;
+    if ($pdo === null) {
+        $c = config('db');
+        $dsn = sprintf(
+            'mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4',
+            $c['host'],
+            (int)($c['port'] ?? 3306),
+            $c['name']
+        );
+        $pdo = new PDO($dsn, $c['user'], $c['password'], [
+            PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES   => false,
+        ]);
+        $pdo->exec("SET time_zone = '" . date('P') . "'");
+    }
+    return $pdo;
+}
+
+function h($s): string
+{
+    return htmlspecialchars((string)$s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+}
+
+function yen($n): string
+{
+    return '¥' . number_format((int)$n);
+}
+
+function base_url(): string
+{
+    $configured = rtrim((string)config('base_url', ''), '/');
+    if ($configured !== '') {
+        return $configured;
+    }
+    $scheme = is_https() ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $dir = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/')), '/');
+    return $scheme . '://' . $host . $dir;
+}
+
+function url(string $path, array $params = []): string
+{
+    $q = $params ? '?' . http_build_query($params) : '';
+    return base_url() . '/' . ltrim($path, '/') . $q;
+}
+
+function redirect(string $url): void
+{
+    header('Location: ' . $url, true, 303);
+    exit;
+}
+
+function not_found(string $message = 'ページが見つかりません。'): void
+{
+    http_response_code(404);
+    render_header('見つかりません');
+    echo '<div class="card"><p>' . h($message) . '</p><p><a href="' . h(url('index.php')) . '">トップへ</a></p></div>';
+    render_footer();
+    exit;
+}
+
+function random_hex(int $bytes): string
+{
+    return bin2hex(random_bytes($bytes));
+}
+
+// ---------------------------------------------------------------- フラッシュ / CSRF
+
+function flash(string $type, string $message): void
+{
+    $_SESSION['flash'][] = ['type' => $type, 'message' => $message];
+}
+
+function take_flashes(): array
+{
+    $f = $_SESSION['flash'] ?? [];
+    unset($_SESSION['flash']);
+    return $f;
+}
+
+function csrf_token(): string
+{
+    if (empty($_SESSION['csrf'])) {
+        $_SESSION['csrf'] = random_hex(32);
+    }
+    return $_SESSION['csrf'];
+}
+
+function csrf_field(): string
+{
+    return '<input type="hidden" name="csrf" value="' . h(csrf_token()) . '">';
+}
+
+function csrf_check(): void
+{
+    $sent = (string)($_POST['csrf'] ?? '');
+    if ($sent === '' || !hash_equals(csrf_token(), $sent)) {
+        http_response_code(400);
+        render_header('エラー');
+        echo '<div class="card"><p>フォームの有効期限が切れました。ページを再読み込みしてやり直してください。</p></div>';
+        render_footer();
+        exit;
+    }
+}
+
+// ---------------------------------------------------------------- 依頼者のブラウザ識別
+
+/**
+ * ブラウザごとのキー（Cookie）。自分が登録した依頼だけ編集・削除できるようにする。
+ * DBにはハッシュのみ保存。
+ */
+function owner_key_hash(): string
+{
+    $key = $_COOKIE['zonbi_owner'] ?? '';
+    if (!preg_match('/^[0-9a-f]{64}$/', $key)) {
+        $key = random_hex(32);
+        $_COOKIE['zonbi_owner'] = $key;
+    }
+    // 毎回期限を延長（1年）
+    setcookie('zonbi_owner', $key, [
+        'expires'  => time() + 60 * 60 * 24 * 365,
+        'path'     => '/',
+        'httponly' => true,
+        'secure'   => is_https(),
+        'samesite' => 'Lax',
+    ]);
+    return hash('sha256', $key);
+}
+
+// ---------------------------------------------------------------- 入力
+
+function input_str(array $src, string $key, int $max): string
+{
+    $v = $src[$key] ?? '';
+    if (!is_string($v)) {
+        return '';
+    }
+    $v = trim(preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $v) ?? '');
+    return mb_substr($v, 0, $max);
+}
+
+function to_int_or_null($v): ?int
+{
+    if (!is_string($v) && !is_int($v)) {
+        return null;
+    }
+    // 全角数字・カンマ・円記号を許容
+    $v = mb_convert_kana((string)$v, 'n');
+    $v = str_replace([',', '，', '¥', '￥', '円', ' '], '', $v);
+    if ($v === '' || !preg_match('/^\d{1,9}$/', $v)) {
+        return null;
+    }
+    return (int)$v;
+}
+
+/**
+ * 1件分の依頼入力を検証。エラーがあれば文字列配列を返す。
+ */
+function validate_entry(array $row, array &$errors, string $label = ''): ?array
+{
+    $e = [
+        'item_name'  => input_str($row, 'item_name', 200),
+        'color'      => input_str($row, 'color', 100),
+        'variant'    => input_str($row, 'variant', 100),
+        'quantity'   => to_int_or_null($row['quantity'] ?? ''),
+        'unit_price' => to_int_or_null($row['unit_price'] ?? ''),
+        'note'       => input_str($row, 'note', 500),
+    ];
+    $before = count($errors);
+    if ($e['item_name'] === '') {
+        $errors[] = $label . '商品名を入力してください。';
+    }
+    if ($e['quantity'] === null || $e['quantity'] < 1 || $e['quantity'] > 9999) {
+        $errors[] = $label . '個数は 1〜9999 の数字で入力してください。';
+    }
+    if ($e['unit_price'] === null || $e['unit_price'] > 10000000) {
+        $errors[] = $label . '単価は 0〜10,000,000 の数字（円）で入力してください。';
+    }
+    return count($errors) === $before ? $e : null;
+}
+
+function row_is_blank(array $row): bool
+{
+    foreach (['item_name', 'color', 'variant', 'quantity', 'unit_price', 'note'] as $k) {
+        if (is_string($row[$k] ?? null) && trim($row[$k]) !== '') {
+            return false;
+        }
+    }
+    return true;
+}
+
+// ---------------------------------------------------------------- データ取得
+
+function find_session(string $publicId): ?array
+{
+    if (!preg_match('/^[0-9a-f]{16}$/', $publicId)) {
+        return null;
+    }
+    $st = db()->prepare('SELECT * FROM shop_sessions WHERE public_id = ?');
+    $st->execute([$publicId]);
+    return $st->fetch() ?: null;
+}
+
+function is_admin_key_valid(array $session, string $key): bool
+{
+    return $key !== '' && hash_equals($session['admin_key'], hash('sha256', $key));
+}
+
+function session_is_open(array $s): bool
+{
+    if ((int)$s['is_closed'] === 1) {
+        return false;
+    }
+    if (!empty($s['deadline']) && strtotime($s['deadline']) < time()) {
+        return false;
+    }
+    return true;
+}
+
+function find_entry(int $sessionId, int $entryId): ?array
+{
+    $st = db()->prepare('SELECT * FROM shop_entries WHERE id = ? AND session_id = ?');
+    $st->execute([$entryId, $sessionId]);
+    return $st->fetch() ?: null;
+}
+
+function fetch_entries(int $sessionId, ?string $ownerHash = null): array
+{
+    $sql = 'SELECT * FROM shop_entries WHERE session_id = ?';
+    $args = [$sessionId];
+    if ($ownerHash !== null) {
+        $sql .= ' AND owner_key = ?';
+        $args[] = $ownerHash;
+    }
+    $sql .= ' ORDER BY requester_name, created_at, id';
+    $st = db()->prepare($sql);
+    $st->execute($args);
+    return $st->fetchAll();
+}
+
+/** 依頼者ごとにまとめる */
+function group_by_person(array $entries): array
+{
+    $out = [];
+    foreach ($entries as $e) {
+        $name = $e['requester_name'];
+        $out[$name] ??= ['name' => $name, 'entries' => [], 'quantity' => 0, 'total' => 0];
+        $out[$name]['entries'][] = $e;
+        $out[$name]['quantity'] += (int)$e['quantity'];
+        $out[$name]['total'] += (int)$e['quantity'] * (int)$e['unit_price'];
+    }
+    return array_values($out);
+}
+
+/** 商品（名前・色・型）ごとにまとめる＝買い物リスト */
+function group_by_item(array $entries): array
+{
+    $out = [];
+    foreach ($entries as $e) {
+        $k = mb_strtolower($e['item_name'] . "\0" . $e['color'] . "\0" . $e['variant'] . "\0" . $e['unit_price']);
+        $out[$k] ??= [
+            'item_name' => $e['item_name'], 'color' => $e['color'], 'variant' => $e['variant'],
+            'unit_price' => (int)$e['unit_price'], 'quantity' => 0, 'purchased' => 0, 'total' => 0, 'people' => [],
+        ];
+        $q = (int)$e['quantity'];
+        $out[$k]['quantity'] += $q;
+        if ((int)$e['is_purchased'] === 1) {
+            $out[$k]['purchased'] += $q;
+        }
+        $out[$k]['total'] += $q * (int)$e['unit_price'];
+        $out[$k]['people'][$e['requester_name']] = ($out[$k]['people'][$e['requester_name']] ?? 0) + $q;
+    }
+    $out = array_values($out);
+    usort($out, fn($a, $b) => [$a['item_name'], $a['color'], $a['variant']] <=> [$b['item_name'], $b['color'], $b['variant']]);
+    return $out;
+}
+
+function summarize(array $entries): array
+{
+    $people = [];
+    $qty = 0;
+    $total = 0;
+    foreach ($entries as $e) {
+        $people[$e['requester_name']] = true;
+        $qty += (int)$e['quantity'];
+        $total += (int)$e['quantity'] * (int)$e['unit_price'];
+    }
+    return ['people' => count($people), 'count' => count($entries), 'quantity' => $qty, 'total' => $total];
+}

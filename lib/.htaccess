@@ -1,0 +1,2 @@
+# lib/ 以下（DB設定など）をブラウザから見えなくする
+Require all denied
