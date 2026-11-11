@@ -2,16 +2,27 @@
 declare(strict_types=1);
 require __DIR__ . '/lib/bootstrap.php';
 
-// 代行者（管理者）用ページ: admin.php?id=共有ID&key=管理キー
+// 代行者（管理者）用ページ
+//   admin.php?id=共有ID&key=管理キー  … 管理用URLで開く
+//   admin.php?id=共有ID               … Googleログインした持ち主が開く
 $session = find_session((string)($_GET['id'] ?? ''));
+if (!$session) {
+    not_found('管理用URLが正しくありません。');
+}
 $key = (string)($_GET['key'] ?? '');
-if (!$session || !is_admin_key_valid($session, $key)) {
+$byKey = is_admin_key_valid($session, $key);
+$byOwner = is_session_owner($session);
+if (!$byKey && !$byOwner) {
+    if (google_enabled() && !current_user() && !empty($session['owner_user_id'])) {
+        redirect(login_url('admin.php?id=' . $session['public_id']));
+    }
     not_found('管理用URLが正しくありません。');
 }
 $sid = (int)$session['id'];
 $publicId = $session['public_id'];
 $view = in_array($_GET['view'] ?? '', ['list', 'person', 'item'], true) ? $_GET['view'] : 'person';
-$base = ['id' => $publicId, 'key' => $key];
+$base = $byKey ? ['id' => $publicId, 'key' => $key] : ['id' => $publicId];
+$user = current_user();
 $self = url('admin.php', $base + ['view' => $view]);
 $shareUrl = url('s.php', ['id' => $publicId]);
 
@@ -100,6 +111,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('success', '依頼を削除しました。');
             redirect($self);
 
+        case 'claim':
+            // 管理用URLで開いたセッションを、ログイン中のアカウントのマイページに登録
+            if ($byKey && $user && empty($session['owner_user_id'])) {
+                db()->prepare('UPDATE shop_sessions SET owner_user_id = ? WHERE id = ? AND owner_user_id IS NULL')
+                    ->execute([(int)$user['id'], $sid]);
+                flash('success', 'マイページに登録しました。今後はログインすれば、どの端末からでも管理できます。');
+            }
+            redirect($self);
+
+        case 'regen_key':
+            // 管理用URLを作り直す（古い管理用URLは使えなくなる）
+            $newKey = random_hex(16);
+            db()->prepare('UPDATE shop_sessions SET admin_key = ? WHERE id = ?')->execute([hash('sha256', $newKey), $sid]);
+            flash('success', '新しい管理用URLを発行しました。以前の管理用URLは使えなくなりました。');
+            redirect(url('admin.php', ['id' => $publicId, 'key' => $newKey]));
+
         case 'delete_session':
             if (input_str($_POST, 'confirm_title', 100) !== $session['title']) {
                 flash('error', 'タイトルが一致しないため削除を中止しました。');
@@ -141,6 +168,7 @@ render_header('管理: ' . $session['title'], 'admin');
       <button type="button" class="btn btn-primary btn-sm" data-copy="<?= h($shareUrl) ?>">コピー</button>
     </div>
   </div>
+  <?php if ($byKey): ?>
   <div class="url-box url-box-admin">
     <label>この管理用URL（<strong>他人に教えないでください</strong>・ブックマーク推奨）</label>
     <div class="copy-row">
@@ -148,6 +176,27 @@ render_header('管理: ' . $session['title'], 'admin');
       <button type="button" class="btn btn-ghost btn-sm" data-copy="<?= h($adminUrl) ?>">コピー</button>
     </div>
   </div>
+  <?php endif; ?>
+
+  <?php if (google_enabled()): ?>
+  <div class="login-box">
+    <?php if ($byOwner): ?>
+      <p>✓ <strong>マイページに登録済み</strong>（<?= h($user['name'] !== '' ? $user['name'] : $user['email']) ?>）。ログインすれば、どの端末からでも<a href="<?= h(url('mypage.php')) ?>">マイページ</a>から管理できます。</p>
+    <?php elseif (!empty($session['owner_user_id'])): ?>
+      <p class="muted small">このセッションは別のアカウントのマイページに登録されています。</p>
+    <?php elseif ($user): ?>
+      <form method="post" action="<?= h($self) ?>">
+        <?= csrf_field() ?>
+        <input type="hidden" name="action" value="claim">
+        <p class="small">このセッションを <?= h($user['name'] !== '' ? $user['name'] : $user['email']) ?> さんのマイページに登録すると、管理用URLがなくてもログインで管理できます。</p>
+        <button class="btn btn-primary btn-sm">マイページに登録</button>
+      </form>
+    <?php else: ?>
+      <p class="small">Googleでログインすると、このセッションをマイページに登録して、どの端末からでも管理できます。</p>
+      <a class="btn btn-google btn-sm" href="<?= h(login_url('admin.php?' . http_build_query($base))) ?>">Googleでログイン</a>
+    <?php endif; ?>
+  </div>
+  <?php endif; ?>
 
   <div class="stats">
     <div><span>依頼者</span><strong><?= $sum['people'] ?>人</strong></div>
@@ -286,6 +335,16 @@ render_header('管理: ' . $session['title'], 'admin');
       <input type="datetime-local" name="deadline" value="<?= $session['deadline'] ? h(date('Y-m-d\TH:i', strtotime($session['deadline']))) : '' ?>">
     </label>
     <button class="btn btn-primary">保存</button>
+  </form>
+</details>
+
+<details class="card">
+  <summary><strong>管理用URLを再発行</strong></summary>
+  <p class="small">管理用URLを他人に知られた、または紛失したときに使います。新しい管理用URLを発行し、<strong>以前の管理用URLは使えなくなります</strong>。共有URL（依頼者用）は変わりません。</p>
+  <form method="post" action="<?= h($self) ?>" data-confirm="管理用URLを再発行しますか？以前の管理用URLは使えなくなります。">
+    <?= csrf_field() ?>
+    <input type="hidden" name="action" value="regen_key">
+    <button class="btn btn-ghost">管理用URLを再発行する</button>
   </form>
 </details>
 

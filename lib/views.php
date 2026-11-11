@@ -26,6 +26,19 @@ function render_header(string $title, string $bodyClass = ''): void
 <body class="<?= h($bodyClass) ?>">
 <header class="site-header">
   <a class="brand" href="<?= h(url('index.php')) ?>">🛍️ <?= h($app) ?></a>
+  <?php if (google_enabled()): ?>
+  <nav class="user-nav">
+    <?php if ($u = current_user()): ?>
+      <a href="<?= h(url('mypage.php')) ?>">マイページ</a>
+      <form method="post" action="<?= h(url('logout.php')) ?>">
+        <?= csrf_field() ?>
+        <button type="submit" class="linklike">ログアウト</button>
+      </form>
+    <?php else: ?>
+      <a class="btn btn-google btn-sm" href="<?= h(login_url()) ?>">代行者ログイン</a>
+    <?php endif; ?>
+  </nav>
+  <?php endif; ?>
 </header>
 <main class="container">
 <?php foreach (take_flashes() as $f): ?>
@@ -41,6 +54,7 @@ function render_footer(): void
   <nav class="footer-links">
     <a href="<?= h(url('index.php')) ?>">トップ</a>
     <a href="<?= h(url('terms.php')) ?>">利用規約・免責事項</a>
+    <a href="<?= h(url('privacy.php')) ?>">プライバシーポリシー</a>
     <a href="<?= h(url('about.php')) ?>">運営者情報</a>
   </nav>
   <?php if (affiliate_enabled()): ?>

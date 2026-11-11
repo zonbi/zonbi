@@ -1,10 +1,32 @@
 -- 推し活グッズ 買い物代行まとめアプリ スキーマ
 -- 文字コード: utf8mb4（絵文字・旧字体OK）
 
+CREATE TABLE IF NOT EXISTS shop_users (
+  id             INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  google_sub     VARCHAR(64)  NOT NULL COMMENT 'GoogleアカウントID',
+  email          VARCHAR(255) NOT NULL DEFAULT '',
+  name           VARCHAR(100) NOT NULL DEFAULT '',
+  created_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  last_login_at  DATETIME     NULL,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_google_sub (google_sub)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS shop_login_tokens (
+  token_hash  CHAR(64)     NOT NULL,
+  user_id     INT UNSIGNED NOT NULL,
+  expires_at  DATETIME     NOT NULL,
+  created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (token_hash),
+  KEY idx_user (user_id),
+  CONSTRAINT fk_tokens_user FOREIGN KEY (user_id) REFERENCES shop_users (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS shop_sessions (
   id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
   public_id    CHAR(16)     NOT NULL COMMENT '共有URL用ID',
   admin_key    CHAR(64)     NOT NULL COMMENT '管理キーのSHA-256',
+  owner_user_id INT UNSIGNED NULL COMMENT 'ログインした代行者',
   title        VARCHAR(100) NOT NULL,
   description  TEXT         NULL,
   event_url    VARCHAR(500) NULL COMMENT 'イベントの公式URL',
@@ -14,7 +36,9 @@ CREATE TABLE IF NOT EXISTS shop_sessions (
   created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
-  UNIQUE KEY uq_public_id (public_id)
+  UNIQUE KEY uq_public_id (public_id),
+  KEY idx_owner_user (owner_user_id),
+  CONSTRAINT fk_sessions_owner FOREIGN KEY (owner_user_id) REFERENCES shop_users (id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS shop_entries (

@@ -4,7 +4,7 @@ require __DIR__ . '/lib/bootstrap.php';
 
 // CSV出力（Excelで文字化けしないよう UTF-8 BOM 付き）
 $session = find_session((string)($_GET['id'] ?? ''));
-if (!$session || !is_admin_key_valid($session, (string)($_GET['key'] ?? ''))) {
+if (!$session || (!is_admin_key_valid($session, (string)($_GET['key'] ?? '')) && !is_session_owner($session))) {
     not_found('管理用URLが正しくありません。');
 }
 $type = in_array($_GET['type'] ?? '', ['list', 'person', 'item'], true) ? $_GET['type'] : 'list';

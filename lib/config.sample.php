@@ -15,6 +15,14 @@ return [
     'app_name' => '推し活グッズ代行まとめ',
     'timezone' => 'Asia/Tokyo',
 
+    // 代行者の Google ログイン（空欄ならログイン機能は表示されません）
+    // Google Cloud Console で OAuth クライアントID（ウェブアプリケーション）を作成し、
+    // 承認済みリダイレクトURIに  <base_url>/google_callback.php  を登録してください。
+    'google' => [
+        'client_id'     => '',
+        'client_secret' => '',
+    ],
+
     // アフィリエイト（空欄ならリンクは表示されません）
     'affiliate' => [
         'amazon_tag' => '',   // AmazonアソシエイトのトラッキングID 例: 'yourname-22'

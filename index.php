@@ -52,6 +52,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 flash('error', $err);
             }
         }
+        if ($u = current_user()) {
+            db()->prepare('UPDATE shop_sessions SET owner_user_id = ? WHERE public_id = ?')->execute([(int)$u['id'], $publicId]);
+        }
         if (!empty($_POST['show_all'])) {
             try {
                 db()->prepare('UPDATE shop_sessions SET show_all = 1 WHERE public_id = ?')->execute([$publicId]);
@@ -71,8 +74,15 @@ render_header(config('app_name', '推し活グッズ代行まとめ'));
   <p>セッションを作ってURLを共有するだけ。依頼する人が「誰が・何を（名前・色・型）・何個・単価」を入力すると、合計額・人別の請求額・買い物リストが自動で整理されます。</p>
 </section>
 
-<section class="card">
+<section class="card" id="create">
   <h2>新しいセッションを作る</h2>
+  <?php if (google_enabled()): ?>
+    <?php if ($u = current_user()): ?>
+      <p class="login-note">✓ <?= h($u['name'] !== '' ? $u['name'] : $u['email']) ?> さんでログイン中。作成したセッションは<a href="<?= h(url('mypage.php')) ?>">マイページ</a>から管理できます。</p>
+    <?php else: ?>
+      <p class="login-note"><a href="<?= h(login_url('index.php')) ?>">Googleでログイン</a>してから作成すると、管理用URLを保存しなくても、マイページからどの端末でも管理できます（ログインなしでも作成できます）。</p>
+    <?php endif; ?>
+  <?php endif; ?>
   <?php render_errors($errors); ?>
   <form method="post" action="<?= h(url('index.php')) ?>">
     <?= csrf_field() ?>

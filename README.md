@@ -27,6 +27,21 @@ PHP + MySQL だけで動くので、CoreServer などのレンタルサーバー
   - 登録後に表示される **「あなた専用の編集URL」** を開けば、別のスマホ・PC・ブラウザからでも編集できる
 - 他の依頼者の内容は見えません（代行者が「みんなの依頼を公開」をオンにした場合は全員分を閲覧可。編集できるのは自分の依頼だけ）
 
+## 代行者のGoogleログイン（任意）
+
+代行者がGoogleでログインすると、作成したセッションが「マイページ」に保存され、管理用URLがなくても、どの端末からでも管理できます。
+ログインしなくても従来どおり管理用URLで使えます。ログイン前に作ったセッションは、管理ページの「マイページに登録」で追加できます。
+
+設定手順:
+1. [Google Cloud Console](https://console.cloud.google.com/) でプロジェクトを作成
+2. 「APIとサービス」→「OAuth同意画面」（Google Auth Platform）でアプリ名・サポートメール・
+   ホームページ（`https://…/index.php`）・プライバシーポリシー（`https://…/privacy.php`）・利用規約（`https://…/terms.php`）を登録し、
+   スコープは `openid` `email` `profile` のみ。対象は「外部」、公開ステータスを「本番環境」にする
+3. 「認証情報」→「OAuthクライアントID」→ 種類「ウェブアプリケーション」
+   - 承認済みのリダイレクトURI: `https://（設置URL）/google_callback.php`
+4. 発行されたクライアントID・シークレットを `lib/config.php` の `google` に記入
+5. phpMyAdmin で `sql/migrations/003_add_google_login.sql` を実行（新規設置なら `schema.sql` に含まれています）
+
 ## アフィリエイト（Amazon・楽天）
 
 `lib/config.php` の `affiliate` に ID を設定すると、各商品の下に「Amazonで探す」「楽天で探す」リンク（PR表記つき）が自動で表示されます。
@@ -42,7 +57,7 @@ PHP + MySQL だけで動くので、CoreServer などのレンタルサーバー
 
 ## 利用規約・運営者情報
 
-- `terms.php`（利用規約・免責事項）と `about.php`（運営者情報）を同梱し、全ページのフッターにリンクしています。
+- `terms.php`（利用規約・免責事項）、`privacy.php`（プライバシーポリシー）、`about.php`（運営者情報）を同梱し、全ページのフッターにリンクしています。
 - 運営者名・連絡先などは `lib/config.php` の `operator` に記入してください（`config.sample.php` 参照）。空欄の項目は「未設定」または非表示になります。
 - セッション作成時は規約への同意チェックが必須、依頼送信時は「送信すると同意したものとみなす」旨を表示します。
 - 規約文はひな形です。必要に応じて専門家の確認を受けてください。
@@ -110,6 +125,7 @@ sql/schema.sql   テーブル作成SQL
 |---|---|
 | `sql/migrations/001_add_show_all.sql` | 「みんなの依頼を公開」機能の列を追加 |
 | `sql/migrations/002_add_event_url.sql` | 「イベントURL」欄の列を追加 |
+| `sql/migrations/003_add_google_login.sql` | 代行者のGoogleログイン用のテーブル・列を追加 |
 
 新しく設置する場合は `sql/schema.sql` だけでOKです（上記は含まれています）。
 

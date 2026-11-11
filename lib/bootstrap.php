@@ -23,6 +23,7 @@ session_set_cookie_params([
 session_start();
 
 require __DIR__ . '/views.php';
+require __DIR__ . '/auth.php';
 
 // ---------------------------------------------------------------- 基本
 
