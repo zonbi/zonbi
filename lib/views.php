@@ -132,7 +132,7 @@ function item_label(array $e): string
     return $parts ? implode(' / ', $parts) : '—';
 }
 
-/** 商品ごとの「Amazon / 楽天で探す」リンク（設定がなければ何も出さない）。下部の「関連グッズを探す」欄で使用 */
+/** キーワードの「Amazon / 楽天で探す」リンク（設定がなければ何も出さない）。下部の「関連商品」欄で使用 */
 function affiliate_links(array $e): string
 {
     if (!affiliate_enabled()) {
@@ -185,40 +185,4 @@ function ad_slot(string $name, string $class): string
         return '';
     }
     return '<aside class="ad ' . h($class) . ' ad-' . h($name) . '" aria-label="広告"><span class="ad-label">PR</span><div class="ad-body">' . $html . '</div></aside>';
-}
-
-/** ページ下部の「関連グッズを探す」欄（依頼された商品名からAmazon/楽天の検索リンクを自動作成） */
-function render_related_box(array $entries, int $limit = 8): void
-{
-    if (!affiliate_enabled() || !$entries) {
-        return;
-    }
-    $seen = [];
-    $items = [];
-    foreach ($entries as $e) {
-        $kw = affiliate_keyword($e);
-        $k = mb_strtolower($kw);
-        if ($kw === '' || isset($seen[$k])) {
-            continue;
-        }
-        $seen[$k] = true;
-        $items[] = $e;
-        if (count($items) >= $limit) {
-            break;
-        }
-    }
-    if (!$items) {
-        return;
-    }
-    ?>
-<section class="card related-box" aria-label="広告">
-  <h2><span class="ad-label">PR</span> 関連グッズを探す</h2>
-  <ul class="related-list">
-    <?php foreach ($items as $e): ?>
-      <li><span class="related-name"><?= h(affiliate_keyword($e)) ?></span><?= affiliate_links($e) ?></li>
-    <?php endforeach; ?>
-  </ul>
-  <p class="muted small">Amazon・楽天の検索結果へのリンクです。イベント限定品は取り扱いがない場合や、定価より高い転売品が表示される場合があります。</p>
-</section>
-<?php
 }

@@ -298,7 +298,7 @@ render_header($session['title']);
 </section>
 <?php endif; ?>
 
-<?php render_related_box($showAll ? array_merge($mine, $all) : $mine); ?>
+<?php render_related_area($session, $showAll ? $all : $mine); ?>
 
 <p class="report-link"><a href="<?= h(url('report.php', ['id' => $publicId])) ?>">⚠ 不適切な内容を報告</a></p>
 <?php

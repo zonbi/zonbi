@@ -25,6 +25,7 @@ session_start();
 require __DIR__ . '/views.php';
 require __DIR__ . '/auth.php';
 require __DIR__ . '/moderation.php';
+require __DIR__ . '/related.php';
 
 // ---------------------------------------------------------------- 基本
 

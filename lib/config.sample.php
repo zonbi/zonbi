@@ -43,6 +43,15 @@ return [
         'rakuten_id' => '',   // 楽天アフィリエイトID 例: '1a2b3c4d.5e6f7a8b.1a2b3c4d.5e6f7a8b'
     ],
 
+    // 楽天市場 商品検索API（関連商品を画像つきで表示。空欄なら検索リンクのみ）
+    // 楽天ウェブサービス（Rakuten Developers）でアプリを登録し、アプリID・アクセスキーを取得してください。
+    // 許可するWebサイト（Referer）に設置先ドメインを登録してください。
+    'rakuten_api' => [
+        'application_id' => '',
+        'access_key'     => '',
+        'endpoint'       => '',   // 空欄なら標準のURL。楽天の仕様変更時に新しいURLを指定
+    ],
+
     // 運営者情報ページ（about.php）に表示する内容。空欄の項目は表示されません。
     'operator' => [
         'name'          => '',   // 運営者名（屋号・ニックネーム可） 例: 'office saya'

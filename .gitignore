@@ -2,3 +2,4 @@ lib/config.php
 *.zip
 # 広告コードはサーバーごとに設定（アップデートで上書きしない）
 ads/*.html
+cache/products/
