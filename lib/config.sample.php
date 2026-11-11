@@ -15,6 +15,12 @@ return [
     'app_name' => '推し活グッズ代行まとめ',
     'timezone' => 'Asia/Tokyo',
 
+    // アフィリエイト（空欄ならリンクは表示されません）
+    'affiliate' => [
+        'amazon_tag' => '',   // AmazonアソシエイトのトラッキングID 例: 'yourname-22'
+        'rakuten_id' => '',   // 楽天アフィリエイトID 例: '1a2b3c4d.5e6f7a8b.1a2b3c4d.5e6f7a8b'
+    ],
+
     // 運営者情報ページ（about.php）に表示する内容。空欄の項目は表示されません。
     'operator' => [
         'name'          => '',   // 運営者名（屋号・ニックネーム可） 例: 'office saya'

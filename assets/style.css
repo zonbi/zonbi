@@ -190,3 +190,13 @@ label.checkbox.consent input { margin-top: 3px; flex: none; }
 .info-table th, .info-table td { text-align: left; padding: 12px 8px; border-bottom: 1px solid var(--line); vertical-align: top; font-size: .95rem; }
 .info-table th { width: 32%; color: var(--muted); font-weight: 600; white-space: nowrap; }
 .info-table td { word-break: break-all; }
+.aff-links { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 4px; }
+.aff-links .pr { font-size: .65rem; border: 1px solid var(--muted); color: var(--muted); border-radius: 4px; padding: 0 4px; line-height: 1.5; }
+.aff { font-size: .72rem; text-decoration: none; padding: 1px 8px; border-radius: 999px; white-space: nowrap; font-weight: 700; }
+.aff-amazon { background: #fff4e0; color: #b35c00; }
+.aff-rakuten { background: #ffe9e9; color: #bf0000; }
+@media (prefers-color-scheme: dark) {
+  .aff-amazon { background: #3a2a10; color: #ffb547; }
+  .aff-rakuten { background: #3a1616; color: #ff7a7a; }
+}
+.aff-disclosure { font-size: .72rem; max-width: 640px; margin: 0 auto 8px !important; }

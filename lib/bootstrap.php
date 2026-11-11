@@ -404,3 +404,44 @@ function operator(string $key): string
     $op = config('operator', []);
     return is_array($op) ? trim((string)($op[$key] ?? '')) : '';
 }
+
+// ---------------------------------------------------------------- アフィリエイト
+
+function affiliate_conf(string $key): string
+{
+    $a = config('affiliate', []);
+    return is_array($a) ? trim((string)($a[$key] ?? '')) : '';
+}
+
+function amazon_enabled(): bool
+{
+    return (bool)preg_match('/^[A-Za-z0-9_-]{1,64}$/', affiliate_conf('amazon_tag'));
+}
+
+function rakuten_enabled(): bool
+{
+    return (bool)preg_match('/^[0-9a-f]{8}(\.[0-9a-f]{8}){3}$/i', affiliate_conf('rakuten_id'));
+}
+
+function affiliate_enabled(): bool
+{
+    return amazon_enabled() || rakuten_enabled();
+}
+
+/** 検索キーワード（商品名＋色＋型） */
+function affiliate_keyword(array $e): string
+{
+    $parts = array_filter([$e['item_name'] ?? '', $e['color'] ?? '', $e['variant'] ?? ''], fn($s) => trim((string)$s) !== '');
+    return mb_substr(implode(' ', $parts), 0, 100);
+}
+
+function amazon_search_url(string $kw): string
+{
+    return 'https://www.amazon.co.jp/s?' . http_build_query(['k' => $kw, 'tag' => affiliate_conf('amazon_tag')]);
+}
+
+function rakuten_search_url(string $kw): string
+{
+    $target = 'https://search.rakuten.co.jp/search/mall/' . rawurlencode($kw) . '/';
+    return 'https://hb.afl.rakuten.co.jp/hgc/' . affiliate_conf('rakuten_id') . '/?pc=' . rawurlencode($target) . '&m=' . rawurlencode($target);
+}

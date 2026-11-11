@@ -43,6 +43,9 @@ function render_footer(): void
     <a href="<?= h(url('terms.php')) ?>">利用規約・免責事項</a>
     <a href="<?= h(url('about.php')) ?>">運営者情報</a>
   </nav>
+  <?php if (affiliate_enabled()): ?>
+  <p class="aff-disclosure">当サイトはアフィリエイトプログラムを利用しており、商品リンク（PR）経由の購入により運営者が収益を得ることがあります。<?php if (amazon_enabled()): ?><br>Amazonのアソシエイトとして、<?= h(operator('name') !== '' ? operator('name') : '当サイト運営者') ?>は適格販売により収入を得ています。<?php endif; ?></p>
+  <?php endif; ?>
   <p>© <?= date('Y') ?> <?= h(operator('name') !== '' ? operator('name') : config('app_name', '推し活グッズ代行まとめ')) ?></p>
 </footer>
 <script src="<?= h(asset('assets/app.js')) ?>"></script>
@@ -107,4 +110,25 @@ function item_label(array $e): string
 {
     $parts = array_filter([$e['color'] ?? '', $e['variant'] ?? ''], fn($s) => $s !== '');
     return $parts ? implode(' / ', $parts) : '—';
+}
+
+/** 商品ごとの「Amazon / 楽天で探す」リンク（設定がなければ何も出さない） */
+function affiliate_links(array $e): string
+{
+    if (!affiliate_enabled()) {
+        return '';
+    }
+    $kw = affiliate_keyword($e);
+    if ($kw === '') {
+        return '';
+    }
+    $attr = ' target="_blank" rel="sponsored nofollow noopener"';
+    $links = [];
+    if (amazon_enabled()) {
+        $links[] = '<a class="aff aff-amazon" href="' . h(amazon_search_url($kw)) . '"' . $attr . '>Amazonで探す</a>';
+    }
+    if (rakuten_enabled()) {
+        $links[] = '<a class="aff aff-rakuten" href="' . h(rakuten_search_url($kw)) . '"' . $attr . '>楽天で探す</a>';
+    }
+    return '<div class="aff-links"><span class="pr">PR</span>' . implode('', $links) . '</div>';
 }

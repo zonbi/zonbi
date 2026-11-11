@@ -196,7 +196,7 @@ render_header($session['title']);
         <tbody>
         <?php foreach ($p['entries'] as $e): ?>
           <tr>
-            <td><?= h($e['item_name']) ?><?php if ($e['note'] !== ''): ?><div class="note"><?= h($e['note']) ?></div><?php endif; ?></td>
+            <td><?= h($e['item_name']) ?><?php if ($e['note'] !== ''): ?><div class="note"><?= h($e['note']) ?></div><?php endif; ?><?= affiliate_links($e) ?></td>
             <td><?= h(item_label($e)) ?></td>
             <td class="num"><?= (int)$e['quantity'] ?></td>
             <td class="num"><?= yen($e['unit_price']) ?></td>
@@ -255,7 +255,7 @@ render_header($session['title']);
         <tbody>
         <?php foreach ($p['entries'] as $e): ?>
           <tr class="<?= (int)$e['is_purchased'] === 1 ? 'done' : '' ?>">
-            <td><?= h($e['item_name']) ?><?php if (hash_equals($e['owner_key'], $owner)): ?> <span class="badge badge-mine">あなた</span><?php endif; ?><?php if ($e['note'] !== ''): ?><div class="note"><?= h($e['note']) ?></div><?php endif; ?></td>
+            <td><?= h($e['item_name']) ?><?php if (hash_equals($e['owner_key'], $owner)): ?> <span class="badge badge-mine">あなた</span><?php endif; ?><?php if ($e['note'] !== ''): ?><div class="note"><?= h($e['note']) ?></div><?php endif; ?><?= affiliate_links($e) ?></td>
             <td><?= h(item_label($e)) ?></td>
             <td class="num"><?= (int)$e['quantity'] ?></td>
             <td class="num"><?= yen($e['unit_price']) ?></td>
@@ -276,7 +276,7 @@ render_header($session['title']);
         <tbody>
         <?php foreach (group_by_item($all) as $it): ?>
           <tr>
-            <td><?= h($it['item_name']) ?></td>
+            <td><?= h($it['item_name']) ?><?= affiliate_links($it) ?></td>
             <td><?= h(item_label($it)) ?></td>
             <td class="num"><?= $it['quantity'] ?></td>
             <td class="num"><?= yen($it['unit_price']) ?></td>
