@@ -99,6 +99,8 @@ if ($open && isset($_GET['edit'])) {
 $mine = fetch_entries($sid, $owner);
 $mineByPerson = group_by_person($mine);
 $mineTotal = summarize($mine);
+$showAll = session_shows_all($session);
+$all = $showAll ? fetch_entries($sid) : [];
 
 render_header($session['title']);
 ?>
@@ -205,5 +207,64 @@ render_header($session['title']);
     <p class="muted small">※ここには、このブラウザから登録した依頼だけが表示されます。別の端末から登録した分の確認・変更は代行者に連絡してください。</p>
   <?php endif; ?>
 </section>
+<?php if ($showAll): ?>
+<section class="card" id="all">
+  <h2>みんなの依頼</h2>
+  <?php if (!$all): ?>
+    <p class="muted">まだ依頼はありません。</p>
+  <?php else: $allSum = summarize($all); ?>
+    <div class="stats">
+      <div><span>依頼者</span><strong><?= $allSum['people'] ?>人</strong></div>
+      <div><span>依頼件数</span><strong><?= $allSum['count'] ?>件</strong></div>
+      <div><span>総個数</span><strong><?= $allSum['quantity'] ?>点</strong></div>
+      <div><span>総額</span><strong><?= yen($allSum['total']) ?></strong></div>
+    </div>
+    <?php foreach (group_by_person($all) as $p): ?>
+      <div class="person-head person-head-sub">
+        <h3><?= h($p['name']) ?> さん</h3>
+        <div class="person-total"><?= $p['quantity'] ?>点 <strong><?= yen($p['total']) ?></strong></div>
+      </div>
+      <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>商品名</th><th>色 / 型</th><th class="num">個数</th><th class="num">単価</th><th class="num">小計</th><th>購入</th></tr></thead>
+        <tbody>
+        <?php foreach ($p['entries'] as $e): ?>
+          <tr class="<?= (int)$e['is_purchased'] === 1 ? 'done' : '' ?>">
+            <td><?= h($e['item_name']) ?><?php if (hash_equals($e['owner_key'], $owner)): ?> <span class="badge badge-mine">あなた</span><?php endif; ?><?php if ($e['note'] !== ''): ?><div class="note"><?= h($e['note']) ?></div><?php endif; ?></td>
+            <td><?= h(item_label($e)) ?></td>
+            <td class="num"><?= (int)$e['quantity'] ?></td>
+            <td class="num"><?= yen($e['unit_price']) ?></td>
+            <td class="num"><?= yen((int)$e['quantity'] * (int)$e['unit_price']) ?></td>
+            <td><?= (int)$e['is_purchased'] === 1 ? '✓ 購入済' : '' ?></td>
+          </tr>
+        <?php endforeach; ?>
+        </tbody>
+      </table>
+      </div>
+    <?php endforeach; ?>
+
+    <details class="item-summary">
+      <summary><strong>商品別の合計を見る</strong></summary>
+      <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>商品名</th><th>色 / 型</th><th class="num">合計数</th><th class="num">単価</th><th class="num">金額</th></tr></thead>
+        <tbody>
+        <?php foreach (group_by_item($all) as $it): ?>
+          <tr>
+            <td><?= h($it['item_name']) ?></td>
+            <td><?= h(item_label($it)) ?></td>
+            <td class="num"><?= $it['quantity'] ?></td>
+            <td class="num"><?= yen($it['unit_price']) ?></td>
+            <td class="num"><?= yen($it['total']) ?></td>
+          </tr>
+        <?php endforeach; ?>
+        </tbody>
+      </table>
+      </div>
+    </details>
+    <p class="muted small">※編集・削除は「あなたの依頼」から行えます（自分の依頼のみ）。</p>
+  <?php endif; ?>
+</section>
+<?php endif; ?>
 <?php
 render_footer();

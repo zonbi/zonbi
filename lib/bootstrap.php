@@ -330,3 +330,9 @@ function summarize(array $entries): array
     }
     return ['people' => count($people), 'count' => count($entries), 'quantity' => $qty, 'total' => $total];
 }
+
+/** 依頼一覧を記入者全員に公開しているか */
+function session_shows_all(array $s): bool
+{
+    return !empty($s['show_all']);
+}

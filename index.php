@@ -39,6 +39,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
         }
+        if (!empty($_POST['show_all'])) {
+            try {
+                db()->prepare('UPDATE shop_sessions SET show_all = 1 WHERE public_id = ?')->execute([$publicId]);
+            } catch (PDOException $e) {
+                flash('error', '「みんなの依頼を公開」を設定できませんでした。phpMyAdmin で sql/migrations/001_add_show_all.sql を実行してください。');
+            }
+        }
         flash('success', 'セッションを作成しました。このページ（管理用URL）は必ずブックマークしてください。');
         redirect(url('admin.php', ['id' => $publicId, 'key' => $adminKey, 'new' => 1]));
     }
@@ -64,6 +71,10 @@ render_header(config('app_name', '推し活グッズ代行まとめ'));
     </label>
     <label>受付締切（任意）
       <input type="datetime-local" name="deadline" value="<?= h($form['deadline']) ?>">
+    </label>
+    <label class="checkbox">
+      <input type="checkbox" name="show_all" value="1"<?= !empty($_POST['show_all']) ? ' checked' : '' ?>>
+      みんなの依頼を記入者全員に公開する（あとから変更できます）
     </label>
     <button type="submit" class="btn btn-primary btn-block">作成して共有URLを発行</button>
   </form>

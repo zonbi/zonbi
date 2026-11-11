@@ -156,3 +156,10 @@ input:focus, textarea:focus { outline: 2px solid var(--primary); outline-offset:
 .danger-zone input { margin: 0; }
 [hidden] { display: none !important; }
 .table { min-width: 560px; }
+.badge-mine { background: var(--primary-soft); color: var(--primary); font-size: .7rem; padding: 1px 8px; }
+.person-head-sub { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 12px; }
+.person-head-sub h3 { margin: 0; }
+.item-summary { margin-top: 18px; }
+.item-summary summary { cursor: pointer; margin-bottom: 8px; }
+label.checkbox { display: flex; gap: 8px; align-items: center; font-weight: 400; }
+label.checkbox input { width: 18px; height: 18px; margin: 0; }

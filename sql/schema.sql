@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS shop_sessions (
   description  TEXT         NULL,
   deadline     DATETIME     NULL COMMENT '受付締切',
   is_closed    TINYINT(1)   NOT NULL DEFAULT 0,
+  show_all     TINYINT(1)   NOT NULL DEFAULT 0 COMMENT '1=依頼一覧を記入者全員に公開',
   created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),

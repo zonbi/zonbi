@@ -51,6 +51,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('success', (int)$session['is_closed'] === 1 ? '受付を再開しました。' : '受付を締め切りました。');
             redirect($self);
 
+        case 'toggle_show_all':
+            try {
+                db()->prepare('UPDATE shop_sessions SET show_all = 1 - show_all WHERE id=?')->execute([$sid]);
+            } catch (PDOException $e) {
+                flash('error', 'データベースの更新が必要です。phpMyAdmin で sql/migrations/001_add_show_all.sql を実行してください。');
+                redirect($self);
+            }
+            flash('success', session_shows_all($session)
+                ? 'みんなの依頼を非公開にしました（各自、自分の依頼だけ表示）。'
+                : 'みんなの依頼を記入者全員に公開しました。');
+            redirect($self);
+
         case 'toggle_purchased':
             db()->prepare('UPDATE shop_entries SET is_purchased = 1 - is_purchased WHERE id=? AND session_id=?')
                 ->execute([(int)($_POST['entry_id'] ?? 0), $sid]);
@@ -146,8 +158,14 @@ render_header('管理: ' . $session['title'], 'admin');
         <button class="btn btn-ghost">受付を締め切る</button>
       <?php endif; ?>
     </form>
+    <form method="post" action="<?= h($self) ?>"<?= session_shows_all($session) ? '' : ' data-confirm="依頼者全員の名前と依頼内容が、共有URLを開いた人全員に見えるようになります。公開しますか？"' ?>>
+      <?= csrf_field() ?>
+      <input type="hidden" name="action" value="toggle_show_all">
+      <button class="btn btn-ghost"><?= session_shows_all($session) ? 'みんなの依頼を非公開にする' : 'みんなの依頼を全員に公開する' ?></button>
+    </form>
     <a class="btn btn-ghost" href="<?= h(url('export.php', $base + ['type' => $view])) ?>">CSVダウンロード（表示中の表）</a>
   </div>
+  <p class="muted small">依頼一覧の公開: <strong><?= session_shows_all($session) ? '公開中（記入者全員が全員分の依頼を見られます）' : '非公開（各自、自分の依頼だけ表示）' ?></strong></p>
   <?php if ((int)$session['is_closed'] === 0 && !$open): ?>
     <p class="muted small">※締切日時を過ぎたため、依頼者からは受付終了と表示されています。</p>
   <?php endif; ?>
