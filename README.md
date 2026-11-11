@@ -42,6 +42,27 @@ PHP + MySQL だけで動くので、CoreServer などのレンタルサーバー
 4. 発行されたクライアントID・シークレットを `lib/config.php` の `google` に記入
 5. phpMyAdmin で `sql/migrations/003_add_google_login.sql` を実行（新規設置なら `schema.sql` に含まれています）
 
+## 犯罪利用対策・運営者コンソール
+
+- **運営者コンソール** `console.php`：全セッション・全依頼の検索（タイトル・依頼者名・商品名・メモ・IP・メール）、詳細表示、削除、受付停止
+- **危険ワード検知**：保存時に「大麻」「覚醒剤」「拳銃」「スーパーコピー」などを検知して印をつける（自動削除はしない）。
+  カタカナ/ひらがな・全角/半角・空白の違いは区別しない。語の追加は `moderation.extra_words`
+- **通報**：依頼者ページ下部の「不適切な内容を報告」から。同じIPから1時間5件まで
+- **記録**：セッション作成・依頼登録・通報時のIPアドレスとブラウザ情報を保存
+- **通知**：検知・通報を `moderation.notify_email` にメール通知
+
+`lib/config.php` の設定例:
+
+```php
+'moderation' => [
+    'admin_emails'     => ['you@example.com'],   // Googleログインでコンソールに入れるアカウント
+    'console_password' => '12文字以上の長いパスワード', // Googleログインを使わない場合
+    'notify_email'     => 'you@example.com',
+    'notify_from'      => 'noreply@office-saya.com',
+    'extra_words'      => [],
+],
+```
+
 ## アフィリエイト（Amazon・楽天）
 
 `lib/config.php` の `affiliate` に ID を設定すると、各商品の下に「Amazonで探す」「楽天で探す」リンク（PR表記つき）が自動で表示されます。
@@ -126,6 +147,7 @@ sql/schema.sql   テーブル作成SQL
 | `sql/migrations/001_add_show_all.sql` | 「みんなの依頼を公開」機能の列を追加 |
 | `sql/migrations/002_add_event_url.sql` | 「イベントURL」欄の列を追加 |
 | `sql/migrations/003_add_google_login.sql` | 代行者のGoogleログイン用のテーブル・列を追加 |
+| `sql/migrations/004_add_moderation.sql` | 運営者コンソール・危険ワード検知・通報・登録時の記録 |
 
 新しく設置する場合は `sql/schema.sql` だけでOKです（上記は含まれています）。
 

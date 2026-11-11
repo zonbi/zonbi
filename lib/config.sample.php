@@ -23,6 +23,20 @@ return [
         'client_secret' => '',
     ],
 
+    // 運営者コンソール（console.php）と犯罪利用対策
+    'moderation' => [
+        // コンソールに入れる運営者の Googleアカウント（Googleログイン設定時）
+        'admin_emails'     => [],          // 例: ['you@example.com']
+        // コンソール用パスワード（12文字以上。Googleログインを使わない場合）
+        'console_password' => '',
+        // 危険ワード検知・通報の通知先メールアドレス（空欄なら通知しない）
+        'notify_email'     => '',
+        // 通知メールの送信元（サーバーのドメインのアドレス推奨。例: 'noreply@example.com'）
+        'notify_from'      => '',
+        // 標準の危険ワードに追加する語
+        'extra_words'      => [],
+    ],
+
     // アフィリエイト（空欄ならリンクは表示されません）
     'affiliate' => [
         'amazon_tag' => '',   // AmazonアソシエイトのトラッキングID 例: 'yourname-22'

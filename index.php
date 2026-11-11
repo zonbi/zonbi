@@ -46,8 +46,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
         }
+        $newId = (int)db()->lastInsertId();
         if ($form['event_url'] !== '') {
-            $newId = (int)db()->lastInsertId();
             if ($err = save_event_url($newId, $form['event_url'])) {
                 flash('error', $err);
             }
@@ -62,6 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 flash('error', '「みんなの依頼を公開」を設定できませんでした。phpMyAdmin で sql/migrations/001_add_show_all.sql を実行してください。');
             }
         }
+        moderate_session($newId, true);
         flash('success', 'セッションを作成しました。このページ（管理用URL）は必ずブックマークしてください。');
         redirect(url('admin.php', ['id' => $publicId, 'key' => $adminKey, 'new' => 1]));
     }

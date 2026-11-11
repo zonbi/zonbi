@@ -56,8 +56,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!$errors) {
                 db()->prepare('UPDATE shop_sessions SET title=?, description=?, deadline=? WHERE id=?')
                     ->execute([$title, $desc, $deadline, $sid]);
-                if (($eventUrl !== '' || !empty($session['event_url'])) && ($err = save_event_url($sid, $eventUrl))) {
-                    flash('error', $err);
+                $eventErr = ($eventUrl !== '' || !empty($session['event_url'])) ? save_event_url($sid, $eventUrl) : null;
+                moderate_session($sid, false);
+                if ($eventErr) {
+                    flash('error', $eventErr);
                 } else {
                     flash('success', 'セッション情報を更新しました。');
                 }
@@ -100,6 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!$errors) {
                 db()->prepare('UPDATE shop_entries SET requester_name=?, item_name=?, color=?, variant=?, quantity=?, unit_price=?, note=? WHERE id=?')
                     ->execute([$name, $v['item_name'], $v['color'], $v['variant'], $v['quantity'], $v['unit_price'], $v['note'], $entry['id']]);
+                moderate_entry((int)$entry['id'], false);
                 flash('success', '依頼を更新しました。');
                 redirect($self . '#e' . $entry['id']);
             }

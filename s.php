@@ -68,10 +68,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $st = $pdo->prepare('INSERT INTO shop_entries
                 (session_id, requester_name, item_name, color, variant, quantity, unit_price, note, owner_key)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+            $newIds = [];
             foreach ($valid as $v) {
                 $st->execute([$sid, $postedName, $v['item_name'], $v['color'], $v['variant'], $v['quantity'], $v['unit_price'], $v['note'], $owner]);
+                $newIds[] = (int)$pdo->lastInsertId();
             }
             $pdo->commit();
+            foreach ($newIds as $nid) {
+                moderate_entry($nid, true);
+            }
             flash('success', count($valid) . '件の依頼を登録しました。あとで編集するときのために、下の「あなた専用の編集URL」を保存しておいてください。');
             redirect($self . '#mine');
         }
@@ -94,6 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$errors) {
             db()->prepare('UPDATE shop_entries SET requester_name=?, item_name=?, color=?, variant=?, quantity=?, unit_price=?, note=? WHERE id=?')
                 ->execute([$name, $v['item_name'], $v['color'], $v['variant'], $v['quantity'], $v['unit_price'], $v['note'], $entry['id']]);
+            moderate_entry((int)$entry['id'], false);
             flash('success', '依頼を更新しました。');
             redirect($self . '#mine');
         }
@@ -291,5 +297,7 @@ render_header($session['title']);
   <?php endif; ?>
 </section>
 <?php endif; ?>
+
+<p class="report-link"><a href="<?= h(url('report.php', ['id' => $publicId])) ?>">⚠ 不適切な内容を報告</a></p>
 <?php
 render_footer();

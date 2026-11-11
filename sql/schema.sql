@@ -33,6 +33,10 @@ CREATE TABLE IF NOT EXISTS shop_sessions (
   deadline     DATETIME     NULL COMMENT '受付締切',
   is_closed    TINYINT(1)   NOT NULL DEFAULT 0,
   show_all     TINYINT(1)   NOT NULL DEFAULT 0 COMMENT '1=依頼一覧を記入者全員に公開',
+  created_ip   VARCHAR(45)  NOT NULL DEFAULT '' COMMENT '作成時のIPアドレス',
+  created_ua   VARCHAR(255) NOT NULL DEFAULT '' COMMENT '作成時のブラウザ情報',
+  flag_words   VARCHAR(255) NOT NULL DEFAULT '' COMMENT '検知した危険ワード',
+  reviewed_at  DATETIME     NULL     COMMENT '運営者が確認済みにした日時',
   created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
@@ -53,6 +57,11 @@ CREATE TABLE IF NOT EXISTS shop_entries (
   note            VARCHAR(500) NOT NULL DEFAULT '',
   is_purchased    TINYINT(1)   NOT NULL DEFAULT 0 COMMENT '代行者用: 購入済み',
   owner_key       CHAR(64)     NOT NULL COMMENT '登録したブラウザのキー(SHA-256)',
+  created_ip      VARCHAR(45)  NOT NULL DEFAULT '' COMMENT '登録時のIPアドレス',
+  created_ua      VARCHAR(255) NOT NULL DEFAULT '' COMMENT '登録時のブラウザ情報',
+  updated_ip      VARCHAR(45)  NOT NULL DEFAULT '' COMMENT '最終更新時のIPアドレス',
+  flag_words      VARCHAR(255) NOT NULL DEFAULT '' COMMENT '検知した危険ワード',
+  reviewed_at     DATETIME     NULL     COMMENT '運営者が確認済みにした日時',
   created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
@@ -60,4 +69,19 @@ CREATE TABLE IF NOT EXISTS shop_entries (
   KEY idx_owner (session_id, owner_key),
   CONSTRAINT fk_entries_session FOREIGN KEY (session_id)
     REFERENCES shop_sessions (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS shop_reports (
+  id           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  session_id   INT UNSIGNED NOT NULL,
+  reason       VARCHAR(50)  NOT NULL,
+  detail       TEXT         NULL,
+  reporter_ip  VARCHAR(45)  NOT NULL DEFAULT '',
+  status       VARCHAR(10)  NOT NULL DEFAULT 'open' COMMENT 'open / resolved',
+  created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  resolved_at  DATETIME     NULL,
+  PRIMARY KEY (id),
+  KEY idx_status (status, created_at),
+  KEY idx_ip (reporter_ip, created_at),
+  CONSTRAINT fk_reports_session FOREIGN KEY (session_id) REFERENCES shop_sessions (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
