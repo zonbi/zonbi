@@ -2,7 +2,7 @@
 declare(strict_types=1);
 require __DIR__ . '/lib/bootstrap.php';
 
-$app = config('app_name', '推し活グッズ代行まとめ');
+$app = config('app_name', '代行さん');
 
 $link = function (string $u): string {
     return preg_match('#^https?://#i', $u)

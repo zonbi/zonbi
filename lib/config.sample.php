@@ -12,7 +12,7 @@ return [
     // アプリの公開URL（末尾スラッシュなし）。空なら自動判定。
     // 例: 'https://example.com/zonbi'
     'base_url' => '',
-    'app_name' => '推し活グッズ代行まとめ',
+    'app_name' => '代行さん',
     'timezone' => 'Asia/Tokyo',
 
     // 代行者の Google ログイン（空欄ならログイン機能は表示されません）

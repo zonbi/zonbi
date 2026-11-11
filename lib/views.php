@@ -10,7 +10,7 @@ function asset(string $path): string
 
 function render_header(string $title, string $bodyClass = ''): void
 {
-    $app = config('app_name', '推し活グッズ代行まとめ');
+    $app = config('app_name', '代行さん');
     header('Content-Type: text/html; charset=UTF-8');
     ?>
 <!doctype html>
@@ -60,7 +60,7 @@ function render_footer(): void
   <?php if (affiliate_enabled()): ?>
   <p class="aff-disclosure">当サイトはアフィリエイトプログラムを利用しており、商品リンク（PR）経由の購入により運営者が収益を得ることがあります。<?php if (amazon_enabled()): ?><br>Amazonのアソシエイトとして、<?= h(operator('name') !== '' ? operator('name') : '当サイト運営者') ?>は適格販売により収入を得ています。<?php endif; ?></p>
   <?php endif; ?>
-  <p>© <?= date('Y') ?> <?= h(operator('name') !== '' ? operator('name') : config('app_name', '推し活グッズ代行まとめ')) ?></p>
+  <p>© <?= date('Y') ?> <?= h(operator('name') !== '' ? operator('name') : config('app_name', '代行さん')) ?></p>
 </footer>
 <script src="<?= h(asset('assets/app.js')) ?>"></script>
 </body>

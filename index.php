@@ -67,7 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-render_header(config('app_name', '推し活グッズ代行まとめ'));
+render_header(config('app_name', '代行さん'));
 ?>
 <section class="hero">
   <h1>グッズの買い物代行、<br>注文をURLひとつでまとめよう</h1>
