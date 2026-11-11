@@ -14,4 +14,15 @@ return [
     'base_url' => '',
     'app_name' => '推し活グッズ代行まとめ',
     'timezone' => 'Asia/Tokyo',
+
+    // 運営者情報ページ（about.php）に表示する内容。空欄の項目は表示されません。
+    'operator' => [
+        'name'          => '',   // 運営者名（屋号・ニックネーム可） 例: 'office saya'
+        'representative'=> '',   // 代表者名（任意）
+        'address'       => '',   // 所在地（個人の場合は空欄可。「請求があれば遅滞なく開示します」と表示）
+        'email'         => '',   // お問い合わせ用メールアドレス
+        'contact_url'   => '',   // お問い合わせフォームのURL（あれば）
+        'website'       => '',   // 運営者のWebサイト 例: 'https://www.office-saya.com/'
+        'sns'           => '',   // 公式SNS（任意） 例: 'https://x.com/xxxx'
+    ],
 ];

@@ -37,7 +37,14 @@ function render_footer(): void
 {
     ?>
 </main>
-<footer class="site-footer">買い物代行のまとめ用ツール</footer>
+<footer class="site-footer">
+  <nav class="footer-links">
+    <a href="<?= h(url('index.php')) ?>">トップ</a>
+    <a href="<?= h(url('terms.php')) ?>">利用規約・免責事項</a>
+    <a href="<?= h(url('about.php')) ?>">運営者情報</a>
+  </nav>
+  <p>© <?= date('Y') ?> <?= h(operator('name') !== '' ? operator('name') : config('app_name', '推し活グッズ代行まとめ')) ?></p>
+</footer>
 <script src="<?= h(asset('assets/app.js')) ?>"></script>
 </body>
 </html>

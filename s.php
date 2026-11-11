@@ -173,6 +173,7 @@ render_header($session['title']);
     </template>
     <button type="button" class="btn btn-ghost btn-block" data-add-row>＋ 商品を追加</button>
     <div class="form-total">合計 <strong data-form-total>¥0</strong></div>
+    <p class="consent-note">送信すると<a href="<?= h(url('terms.php')) ?>" target="_blank">利用規約・免責事項</a>に同意したものとみなします。代行の取引は代行者とあなたの間で行われ、本サービスの運営者は関与しません。</p>
     <button type="submit" class="btn btn-primary btn-block">この内容で依頼する</button>
   </form>
 </section>

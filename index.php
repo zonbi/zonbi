@@ -15,6 +15,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($form['title'] === '') {
         $errors[] = 'タイトルを入力してください。';
     }
+    if (empty($_POST['agree'])) {
+        $errors[] = '利用規約・免責事項への同意が必要です。';
+    }
     if ($err = event_url_error($form['event_url'])) {
         $errors[] = $err;
     }
@@ -88,6 +91,10 @@ render_header(config('app_name', '推し活グッズ代行まとめ'));
     <label class="checkbox">
       <input type="checkbox" name="show_all" value="1"<?= !empty($_POST['show_all']) ? ' checked' : '' ?>>
       みんなの依頼を記入者全員に公開する（あとから変更できます）
+    </label>
+    <label class="checkbox consent">
+      <input type="checkbox" name="agree" value="1" required<?= !empty($_POST['agree']) ? ' checked' : '' ?>>
+      <span><a href="<?= h(url('terms.php')) ?>" target="_blank">利用規約・免責事項</a>に同意します（代行に関するトラブルは当事者間で解決し、運営者は関与しません）</span>
     </label>
     <button type="submit" class="btn btn-primary btn-block">作成して共有URLを発行</button>
   </form>

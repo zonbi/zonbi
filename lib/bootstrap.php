@@ -397,3 +397,10 @@ function save_event_url(int $sessionId, string $u): ?string
         return 'イベントURLを保存できませんでした。phpMyAdmin で sql/migrations/002_add_event_url.sql を実行してください。';
     }
 }
+
+/** 運営者情報（config.php の operator） */
+function operator(string $key): string
+{
+    $op = config('operator', []);
+    return is_array($op) ? trim((string)($op[$key] ?? '')) : '';
+}

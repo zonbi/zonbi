@@ -172,3 +172,21 @@ input[type=url] {
   background: var(--card); color: var(--text);
 }
 .event-url { margin: 8px 0; word-break: break-all; font-size: .9rem; }
+.footer-links { display: flex; gap: 6px 18px; justify-content: center; flex-wrap: wrap; margin-bottom: 8px; }
+.footer-links a { color: var(--muted); text-decoration: none; font-size: .85rem; }
+.footer-links a:hover { color: var(--primary); text-decoration: underline; }
+.site-footer p { margin: 0; }
+.consent-note { font-size: .8rem; color: var(--muted); margin: 8px 0; }
+label.checkbox.consent { align-items: flex-start; font-size: .85rem; margin-top: 4px; }
+label.checkbox.consent input { margin-top: 3px; flex: none; }
+.doc h1 { font-size: 1.4rem; }
+.doc h2 { font-size: 1.05rem; margin: 1.6rem 0 .5rem; padding-left: 10px; border-left: 4px solid var(--primary); }
+.doc p, .doc li { font-size: .95rem; }
+.doc ol, .doc ul { padding-left: 1.4em; }
+.doc li { margin-bottom: .35rem; }
+.doc .lead { background: var(--primary-soft); border-radius: 10px; padding: 12px 14px; }
+.doc .dates { text-align: right; color: var(--muted); font-size: .85rem; margin-top: 2rem; }
+.info-table { width: 100%; border-collapse: collapse; }
+.info-table th, .info-table td { text-align: left; padding: 12px 8px; border-bottom: 1px solid var(--line); vertical-align: top; font-size: .95rem; }
+.info-table th { width: 32%; color: var(--muted); font-weight: 600; white-space: nowrap; }
+.info-table td { word-break: break-all; }
