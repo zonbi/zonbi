@@ -1,0 +1,27 @@
+/* テーマ: モノトーン — 白黒基調のミニマル。ライト/ダーク自動切替 */
+:root {
+  --bg: #f6f6f7; --page-bg: #f6f6f7; --card: #ffffff; --text: #111113; --muted: #6b6b73; --line: #e4e4e7;
+  --primary: #111113; --primary-dark: #000000; --primary-soft: #ececef;
+  --ok: #15803d; --ok-soft: #e7f6ec; --danger: #dc2626; --danger-soft: #fdecec;
+  --radius: 14px; --radius-sm: 10px; --btn-radius: 10px;
+  --shadow: 0 1px 0 rgba(0,0,0,.04), 0 1px 3px rgba(0,0,0,.06);
+  --shadow-hover: 0 4px 14px rgba(0,0,0,.1);
+  --card-border: 1px solid #e4e4e7;
+  --header-bg: rgba(255,255,255,.85);
+  --hero-gradient: linear-gradient(90deg, #111113, #55555c);
+  --focus-ring: 0 0 0 3px rgba(17,17,19,.15);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0e0e10; --page-bg: #0e0e10; --card: #18181b; --text: #f4f4f5; --muted: #a1a1aa; --line: #2e2e33;
+    --primary: #f4f4f5; --primary-dark: #ffffff; --primary-soft: #26262b; --btn-text: #111113;
+    --ok: #4ade80; --ok-soft: #142a1c; --danger: #f87171; --danger-soft: #2f1717;
+    --card-border: 1px solid #2e2e33; --header-bg: rgba(14,14,16,.85);
+    --hero-gradient: linear-gradient(90deg, #ffffff, #a1a1aa);
+    --focus-ring: 0 0 0 3px rgba(255,255,255,.2);
+  }
+}
+.btn-primary { box-shadow: none; }
+.btn-primary:hover { box-shadow: none; opacity: .9; }
+.hero h1 { letter-spacing: -.01em; }
+.tabs a.active { color: var(--btn-text, #fff); }

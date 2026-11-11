@@ -82,6 +82,22 @@
     recalc();
   });
 
+  // ---- 表をスマホでカード型に（見出しを各セルに data-label として付与）
+  document.querySelectorAll('table.table').forEach(function (t) {
+    var heads = Array.prototype.map.call(t.querySelectorAll('thead th'), function (th) { return th.textContent.trim(); });
+    if (heads.length < 3) return;
+    t.querySelectorAll('tbody tr').forEach(function (tr) {
+      var titled = false;
+      Array.prototype.forEach.call(tr.children, function (td, i) {
+        var label = heads[i] || '';
+        td.setAttribute('data-label', label);
+        // 最初の「商品名・タイトル・依頼者」系の列をカードの見出しにする
+        if (!titled && /商品|タイトル|依頼者|セッション/.test(label)) { td.classList.add('stack-title'); titled = true; }
+      });
+    });
+    t.classList.add('stack');
+  });
+
   // ---- 確認ダイアログ
   document.querySelectorAll('form[data-confirm]').forEach(function (f) {
     f.addEventListener('submit', function (ev) {

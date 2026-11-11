@@ -1,0 +1,32 @@
+/* テーマ: ラベンダー — パステルのグラデーションとすりガラス、丸ゴシック。ライト/ダーク自動切替 */
+@import url("https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap");
+:root {
+  --font: "M PLUS Rounded 1c", "Hiragino Maru Gothic ProN", "Hiragino Sans", "Noto Sans JP", Meiryo, sans-serif;
+  --bg: #f7f3ff; --card: rgba(255,255,255,.72); --text: #2d2640; --muted: #7d7395; --line: #e6dcfa;
+  --primary: #8b5cf6; --primary-dark: #7c3aed; --primary-soft: #efe7ff;
+  --ok: #10b981; --ok-soft: #e3f8f0; --danger: #e5487a; --danger-soft: #fde8ef;
+  --page-bg: linear-gradient(160deg, #fde7f3 0%, #efe7ff 45%, #e2f0ff 100%);
+  --radius: 24px; --radius-sm: 16px;
+  --shadow: 0 10px 30px rgba(139,92,246,.12);
+  --shadow-hover: 0 14px 36px rgba(139,92,246,.2);
+  --card-border: 1px solid rgba(255,255,255,.7);
+  --header-bg: rgba(255,255,255,.55);
+  --input-bg: rgba(255,255,255,.85);
+  --btn-bg: linear-gradient(120deg, #a78bfa, #f472b6);
+  --btn-bg-hover: linear-gradient(120deg, #8b5cf6, #ec4899);
+  --hero-gradient: linear-gradient(120deg, #8b5cf6, #ec4899);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1a1530; --card: rgba(38,30,66,.72); --text: #f1ecff; --muted: #b3a8d6; --line: #3b3060;
+    --primary: #b79bff; --primary-dark: #cbb6ff; --primary-soft: #2e2550;
+    --ok: #34d399; --ok-soft: #12342a; --danger: #ff7aa2; --danger-soft: #3a1a29;
+    --page-bg: linear-gradient(160deg, #2a1838 0%, #1a1530 50%, #142240 100%);
+    --card-border: 1px solid rgba(255,255,255,.08);
+    --header-bg: rgba(26,21,48,.6); --input-bg: rgba(20,16,38,.6);
+  }
+}
+.card, .tabs { -webkit-backdrop-filter: blur(16px) saturate(140%); backdrop-filter: blur(16px) saturate(140%); }
+.btn-primary { background-image: var(--btn-bg); background-color: transparent; }
+.btn-primary:hover { background-image: var(--btn-bg-hover); }
+.tabs a.active { background: linear-gradient(120deg, #a78bfa, #f472b6); }

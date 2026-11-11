@@ -1,0 +1,13 @@
+/* テーマ: さくら（標準）— やわらかいピンク。ライト/ダーク自動切替 */
+:root {
+  --page-bg: radial-gradient(1200px 600px at 10% -10%, #ffe3ef 0%, transparent 60%),
+             radial-gradient(900px 500px at 110% 0%, #efe6ff 0%, transparent 55%), #fdf7fb;
+  --hero-gradient: linear-gradient(120deg, #e0457b 0%, #b04ad8 100%);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --page-bg: radial-gradient(1200px 600px at 10% -10%, #3a1a2b 0%, transparent 60%),
+               radial-gradient(900px 500px at 110% 0%, #2a1f3d 0%, transparent 55%), #18141b;
+    --hero-gradient: linear-gradient(120deg, #ff7aa8 0%, #c79bff 100%);
+  }
+}

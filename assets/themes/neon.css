@@ -1,0 +1,26 @@
+/* テーマ: ネオン — ライブ会場のような常時ダーク＋ネオンカラー */
+:root {
+  color-scheme: dark;
+  --bg: #0b0b16; --card: #14142a; --text: #f2f0ff; --muted: #a09cc8; --line: #2a2850;
+  --primary: #ff3d9a; --primary-dark: #ff6db3; --primary-soft: #3a1435;
+  --ok: #2ef2c5; --ok-soft: #0f3330; --danger: #ff5c7a; --danger-soft: #3b1522;
+  --page-bg: radial-gradient(900px 500px at 0% 0%, rgba(255,61,154,.18), transparent 60%),
+             radial-gradient(900px 500px at 100% 10%, rgba(0,229,255,.16), transparent 60%), #0b0b16;
+  --radius: 16px; --radius-sm: 12px;
+  --shadow: 0 0 0 1px rgba(255,255,255,.04), 0 10px 30px rgba(0,0,0,.5);
+  --shadow-hover: 0 0 0 1px rgba(0,229,255,.4), 0 0 24px rgba(0,229,255,.25);
+  --card-border: 1px solid #23224a;
+  --header-bg: rgba(11,11,22,.75);
+  --input-bg: #0f0f22;
+  --btn-bg: linear-gradient(120deg, #ff3d9a, #8a5cff);
+  --btn-bg-hover: linear-gradient(120deg, #ff5fae, #00e5ff);
+  --hero-gradient: linear-gradient(90deg, #ff3d9a, #00e5ff);
+  --focus-ring: 0 0 0 3px rgba(0,229,255,.35);
+}
+.btn-primary { background-image: var(--btn-bg); background-color: transparent; box-shadow: 0 0 18px rgba(255,61,154,.45); }
+.btn-primary:hover { background-image: var(--btn-bg-hover); box-shadow: 0 0 24px rgba(0,229,255,.5); }
+.tabs a.active { background: linear-gradient(120deg, #ff3d9a, #8a5cff); box-shadow: 0 0 14px rgba(255,61,154,.5); }
+.hero h1 { text-shadow: 0 0 30px rgba(255,61,154,.25); }
+.stats strong { color: #fff; }
+.badge-open { box-shadow: 0 0 10px rgba(46,242,197,.35); }
+.product img { background: #fff; }

@@ -276,3 +276,113 @@ input[type=password] { display: block; width: 100%; margin-top: 4px; padding: 10
 .tbd { color: var(--muted); font-size: .85em; }
 .tbd-note { display: inline-block; margin-left: 4px; font-size: .7rem; font-weight: 600; color: var(--muted); white-space: nowrap; }
 .stats .tbd-note { display: block; margin: 0; }
+
+/* =====================================================================
+   モダンレイヤー（テーマは assets/themes/*.css で下の変数を上書き）
+   ===================================================================== */
+:root {
+  --font: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic UI", Meiryo, system-ui, -apple-system, sans-serif;
+  --font-heading: var(--font);
+  --radius: 18px;
+  --radius-sm: 12px;
+  --btn-radius: 999px;
+  --shadow: 0 1px 2px rgba(60, 20, 40, .04), 0 8px 28px rgba(60, 20, 40, .07);
+  --shadow-hover: 0 2px 4px rgba(60, 20, 40, .06), 0 12px 32px rgba(60, 20, 40, .12);
+  --card-border: 1px solid rgba(0, 0, 0, .04);
+  --header-bg: rgba(255, 255, 255, .78);
+  --input-bg: var(--card);
+  --focus-ring: 0 0 0 4px color-mix(in srgb, var(--primary) 22%, transparent);
+  --btn-bg: var(--primary);
+  --btn-bg-hover: var(--primary-dark);
+  --btn-text: #fff;
+  --hero-gradient: linear-gradient(120deg, var(--primary), color-mix(in srgb, var(--primary) 55%, #7c3aed));
+  --page-bg: var(--bg);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 28px rgba(0, 0, 0, .35);
+    --shadow-hover: 0 2px 4px rgba(0, 0, 0, .35), 0 12px 32px rgba(0, 0, 0, .45);
+    --card-border: 1px solid rgba(255, 255, 255, .06);
+    --header-bg: rgba(24, 20, 27, .78);
+  }
+}
+
+body { font-family: var(--font); background: var(--page-bg); background-attachment: fixed; letter-spacing: .01em; -webkit-font-smoothing: antialiased; }
+h1, h2, h3, .brand { font-family: var(--font-heading); letter-spacing: .02em; }
+h1 { font-size: clamp(1.3rem, 1.1rem + 1vw, 1.65rem); }
+
+/* ヘッダー：スクロールしても上部に固定、すりガラス */
+.site-header {
+  position: sticky; top: 0; z-index: 20;
+  background: var(--header-bg); border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+  -webkit-backdrop-filter: saturate(160%) blur(14px); backdrop-filter: saturate(160%) blur(14px);
+  padding: 10px max(16px, env(safe-area-inset-right)) 10px max(16px, env(safe-area-inset-left));
+}
+.brand { font-size: 1.05rem; font-weight: 800; }
+
+/* ヒーロー */
+.hero { padding: clamp(16px, 4vw, 40px) 4px clamp(8px, 2vw, 20px); }
+.hero h1 { font-size: clamp(1.6rem, 1.2rem + 2.2vw, 2.5rem); line-height: 1.25; background: var(--hero-gradient); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.hero p { font-size: clamp(.95rem, .9rem + .3vw, 1.05rem); max-width: 40em; }
+
+/* カード */
+.card { border: var(--card-border); border-radius: var(--radius); box-shadow: var(--shadow); padding: clamp(16px, 3vw, 24px); margin-bottom: 18px; }
+.description, .login-note, .login-box, .stats div, .edit-url-box { border-radius: var(--radius-sm); }
+.stats div { border: 1px solid color-mix(in srgb, var(--line) 60%, transparent); }
+.stats strong { font-size: clamp(1.1rem, 1rem + .5vw, 1.35rem); }
+
+/* 入力 */
+input[type=text], input[type=number], input[type=datetime-local], input[type=url], input[type=password], textarea {
+  background: var(--input-bg); border-radius: var(--radius-sm); padding: 12px 14px; transition: border-color .15s, box-shadow .15s;
+}
+input:focus, textarea:focus { outline: none; border-color: var(--primary); box-shadow: var(--focus-ring); }
+.entry-row { border-radius: var(--radius-sm); background: color-mix(in srgb, var(--bg) 55%, transparent); border-style: solid; }
+
+/* ボタン */
+.btn { border-radius: var(--btn-radius); padding: 11px 20px; transition: transform .12s, box-shadow .15s, background .15s; }
+.btn:active { transform: translateY(1px); }
+.btn-primary { background: var(--btn-bg); color: var(--btn-text); box-shadow: 0 6px 16px color-mix(in srgb, var(--primary) 28%, transparent); }
+.btn-primary:hover { background: var(--btn-bg-hover); box-shadow: 0 8px 22px color-mix(in srgb, var(--primary) 36%, transparent); }
+.btn-sm { padding: 6px 12px; }
+.btn-block { padding: 14px 20px; font-size: 1rem; }
+.tabs { gap: 6px; padding: 4px; background: var(--card); border-radius: 999px; box-shadow: var(--shadow); width: fit-content; max-width: 100%; }
+.tabs a { padding: 8px 16px; }
+
+/* 商品カード */
+.product { border-radius: var(--radius-sm); transition: transform .15s, box-shadow .15s; }
+.product:hover { transform: translateY(-2px); box-shadow: var(--shadow-hover); }
+
+/* フォーカスが見えるように（キーボード操作） */
+a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: 6px; }
+
+/* 動きを減らす設定の人には動きを止める */
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
+
+/* ---- スマホ：表をカード型に組み替え（assets/app.js が data-label を付与） ---- */
+@media (max-width: 640px) {
+  .container { padding: 12px; }
+  .table.stack { min-width: 0; }
+  .table.stack thead { display: none; }
+  .table.stack tbody tr { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; padding: 12px; margin: 0 0 10px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--card); }
+  .table.stack tbody td { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; border: 0; padding: 3px 0; text-align: left; }
+  .table.stack tbody td::before { content: attr(data-label); color: var(--muted); font-size: .72rem; font-weight: 600; white-space: nowrap; }
+  .table.stack tbody td[data-label=""]::before, .table.stack tbody td:not([data-label])::before { content: none; }
+  .table.stack tbody td.stack-title { grid-column: 1 / -1; display: block; font-weight: 700; font-size: .95rem; padding-bottom: 6px; border-bottom: 1px dashed var(--line); margin-bottom: 4px; }
+  .table.stack tbody td.stack-title::before { content: none; }
+  .table.stack tbody td.row-actions { grid-column: 1 / -1; justify-content: flex-end; padding-top: 8px; }
+  .table.stack tbody td.row-actions::before { content: none; }
+  .table.stack tbody tr.done td { text-decoration: none !important; }
+  .table.stack tbody tr.done { opacity: .6; }
+  .table.stack tfoot tr { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; padding: 8px 4px 0; }
+  .table.stack tfoot th { padding: 0; }
+  .table.stack tfoot th:empty { display: none; }
+  .table-wrap { overflow: visible; margin: 0; }
+  .tabs { width: 100%; }
+  .tabs a { flex: 1; text-align: center; padding: 8px 10px; }
+  .actions .btn { flex: 1 1 auto; }
+  .copy-row { flex-wrap: wrap; }
+  .copy-row input { flex-basis: 100%; }
+  .copy-row .btn { width: 100%; }
+}

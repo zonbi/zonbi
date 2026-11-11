@@ -22,6 +22,7 @@ function render_header(string $title, string $bodyClass = ''): void
 <meta name="referrer" content="same-origin">
 <title><?= h($title === $app ? $app : "$title | $app") ?></title>
 <link rel="stylesheet" href="<?= h(asset('assets/style.css')) ?>">
+<?php if ($theme = current_theme()): ?><link rel="stylesheet" href="<?= h(asset('assets/themes/' . $theme . '.css')) ?>"><?php endif; ?>
 </head>
 <?php $GLOBALS['show_ads'] = basename((string)($_SERVER['SCRIPT_NAME'] ?? '')) !== 'console.php'; ?>
 <body class="<?= h($bodyClass) ?>">
@@ -204,4 +205,11 @@ function line_total_html(array $e): string
 function total_html(int $total, int $unpriced): string
 {
     return h(yen($total)) . ($unpriced > 0 ? '<span class="tbd-note">＋単価未定' . $unpriced . '件</span>' : '');
+}
+
+/** 使用中のデザインテーマ（config の theme。assets/themes/<名前>.css） */
+function current_theme(): string
+{
+    $t = (string)config('theme', 'sakura');
+    return preg_match('/^[a-z0-9_-]{1,32}$/', $t) && is_file(dirname(__DIR__) . '/assets/themes/' . $t . '.css') ? $t : '';
 }

@@ -1,0 +1,22 @@
+/* テーマ: ミント — さわやかなグリーン系。ライト/ダーク自動切替 */
+:root {
+  --bg: #f2fbf8; --card: #ffffff; --text: #17302b; --muted: #5d7a73; --line: #d5ece5;
+  --primary: #0f9f8f; --primary-dark: #0b7f72; --primary-soft: #dcf5ef;
+  --ok: #16a34a; --ok-soft: #e3f6ea; --danger: #e5484d; --danger-soft: #fdecec;
+  --page-bg: linear-gradient(180deg, #e6f8f2 0%, #f6fcfa 40%, #f2fbf8 100%);
+  --radius: 18px; --radius-sm: 12px;
+  --shadow: 0 1px 2px rgba(15,80,70,.05), 0 8px 24px rgba(15,80,70,.08);
+  --shadow-hover: 0 12px 30px rgba(15,80,70,.14);
+  --header-bg: rgba(255,255,255,.8);
+  --hero-gradient: linear-gradient(120deg, #0f9f8f, #3b82f6);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1a18; --card: #13241f; --text: #e5f5f1; --muted: #8fb3aa; --line: #23403a;
+    --primary: #34d1bf; --primary-dark: #5fe0d1; --primary-soft: #143630; --btn-text: #062520;
+    --ok: #4ade80; --ok-soft: #12301d; --danger: #f87171; --danger-soft: #331717;
+    --page-bg: linear-gradient(180deg, #0f2421 0%, #0d1a18 50%);
+    --header-bg: rgba(13,26,24,.8);
+    --hero-gradient: linear-gradient(120deg, #34d1bf, #7cb7ff);
+  }
+}

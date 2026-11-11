@@ -14,6 +14,8 @@ return [
     'base_url' => '',
     'app_name' => '代行さん',
     'timezone' => 'Asia/Tokyo',
+    // デザインテーマ: sakura（さくら・標準） / mono（モノトーン） / lavender（ラベンダー） / neon（ネオン） / mint（ミント）
+    'theme'    => 'sakura',
 
     // 代行者の Google ログイン（空欄ならログイン機能は表示されません）
     // Google Cloud Console で OAuth クライアントID（ウェブアプリケーション）を作成し、
