@@ -57,6 +57,12 @@ SNSアカウント名は X / Instagram / Threads から種類を選んで入力�
 | `assets/img/ogp.png` | LINE・X などでURLを共有したときのプレビュー画像（1200×630） |
 | `assets/img/favicon.svg` | ブラウザのタブのアイコン |
 
+## Googleタグ・AdSense
+
+`lib/views.php` の `<head>` 直後に Googleタグ（GTM-5TG69DSV）と Google AdSense（ca-pub-2856922787390059）を設置しています。
+管理キー等がURLに含まれるページ（管理ページ・似た商品まとめ・運営者コンソール・マイページ等）では、URLがGoogleに送信されないよう読み込みません（`analytics_allowed()`）。
+AdSense用の `ads.txt`（`google.com, pub-2856922787390059, DIRECT, f08c47fec0942fa0`）はドメインのルート（例: `https://www.office-saya.com/ads.txt`）に置いてください。
+
 ## デザインテーマ
 
 `lib/config.php` の `'theme'` で切り替えます（`assets/themes/<名前>.css`）。全テーマともスマホ対応・ダークモード自動切替（ネオンは常時ダーク）。

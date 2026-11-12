@@ -40,6 +40,7 @@ render_header('プライバシーポリシー');
   <h2>5. 外部サービス</h2>
   <ul>
     <li>Googleログイン（Google LLC）：ログイン時にGoogleのプライバシーポリシーが適用されます。</li>
+    <li>広告配信（Google AdSense、Google LLC）：当サイトは第三者配信の広告サービス「Google AdSense」を利用しています。Googleなどの第三者配信事業者は、Cookieを使用して、利用者が当サイトや他のサイトに過去にアクセスした際の情報に基づいて広告を配信します。利用者は<a href="https://adssettings.google.com/" target="_blank" rel="noopener">Googleの広告設定</a>でパーソナライズ広告を無効にできます。また、<a href="https://www.aboutads.info/" target="_blank" rel="noopener">www.aboutads.info</a> で第三者配信事業者のCookieを無効にできます。管理用URLなど秘密の値を含むページでは使用していません。詳しくは<a href="https://policies.google.com/technologies/ads?hl=ja" target="_blank" rel="noopener">Googleの広告に関するポリシー</a>をご覧ください。</li>
     <li>アクセス解析（Googleタグマネージャー／Googleアナリティクス、Google LLC）：サービス改善のため、Cookie等を利用して閲覧ページ・閲覧環境などの情報を収集します。個人を特定する情報は含みません。管理用URLなど秘密の値を含むページでは使用していません。収集を望まない場合は、<a href="https://tools.google.com/dlpage/gaoptout?hl=ja" target="_blank" rel="noopener">Googleアナリティクス オプトアウト アドオン</a>で無効にできます。</li>
     <?php if (current_theme() === 'lavender'): ?><li>Google Fonts（Google LLC）：ページの表示に使うフォントをGoogleのサーバーから読み込みます。</li><?php endif; ?>
     <li>アフィリエイトプログラム（Amazonアソシエイト・楽天アフィリエイト等）：広告リンクをクリックした場合、リンク先の事業者がCookie等により情報を取得することがあります。また、関連商品の画像は楽天グループのサーバーから読み込まれます。取扱いは各事業者のポリシーによります。</li>

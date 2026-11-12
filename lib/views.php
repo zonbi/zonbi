@@ -23,6 +23,8 @@ function render_header(string $title, string $bodyClass = ''): void
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
 </script>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2856922787390059"
+     crossorigin="anonymous"></script>
 <?php endif; ?>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -83,8 +85,8 @@ function render_footer(): void
     <a href="<?= h(url('privacy.php')) ?>">プライバシーポリシー</a>
     <a href="<?= h(url('about.php')) ?>">運営者情報</a>
   </nav>
-  <?php if (affiliate_enabled() || has_ad_slots()): ?>
-  <p class="aff-disclosure">当サイトはアフィリエイトプログラム等の広告を掲載しており、広告（PR）経由の購入により運営者が収益を得ることがあります。<?php if (amazon_enabled() || ads_have_amazon_tag()): ?><br>Amazonのアソシエイトとして、<?= h(operator('name') !== '' ? operator('name') : '当サイト運営者') ?>は適格販売により収入を得ています。<?php endif; ?></p>
+  <?php if (affiliate_enabled() || has_ad_slots() || analytics_allowed()): ?>
+  <p class="aff-disclosure">当サイトは広告（Google AdSense・アフィリエイトプログラム等）を掲載しており、広告経由の購入等により運営者が収益を得ることがあります。<?php if (amazon_enabled() || ads_have_amazon_tag()): ?><br>Amazonのアソシエイトとして、<?= h(operator('name') !== '' ? operator('name') : '当サイト運営者') ?>は適格販売により収入を得ています。<?php endif; ?></p>
   <?php endif; ?>
   <p>© <?= date('Y') ?> <?= h(operator('name') !== '' ? operator('name') : config('app_name', '代行さん')) ?></p>
 </footer>
@@ -305,7 +307,7 @@ function inline_svg(string $path): string
 }
 
 /**
- * アクセス解析（Googleタグマネージャー）を読み込むページか。
+ * アクセス解析（Googleタグマネージャー）・広告（Google AdSense）を読み込むページか。
  * 管理キーなど秘密の値がURLに含まれるページ（管理ページ・似た商品まとめ・運営者コンソール等）では、
  * URLがGoogleに送信されないよう読み込まない。
  */
