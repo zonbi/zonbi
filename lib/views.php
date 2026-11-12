@@ -21,6 +21,17 @@ function render_header(string $title, string $bodyClass = ''): void
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="same-origin">
 <title><?= h($title === $app ? $app : "$title | $app") ?></title>
+<?php $ogDesc = '推し活グッズの買い物代行、注文をURLひとつでまとめよう。誰が・何を・何個を入力するだけで、合計や買い物リストを自動で整理します。'; ?>
+<meta name="description" content="<?= h($ogDesc) ?>">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="<?= h($app) ?>">
+<meta property="og:title" content="<?= h($title === $app ? $app : "$title | $app") ?>">
+<meta property="og:description" content="<?= h($ogDesc) ?>">
+<meta property="og:image" content="<?= h(url('assets/img/ogp.png')) ?>">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="<?= h(url('assets/img/favicon.svg')) ?>" type="image/svg+xml">
 <link rel="stylesheet" href="<?= h(asset('assets/style.css')) ?>">
 <?php if ($theme = current_theme()): ?><link rel="stylesheet" href="<?= h(asset('assets/themes/' . $theme . '.css')) ?>"><?php endif; ?>
 </head>
@@ -262,4 +273,15 @@ function detail_header(array $ff): string
         }
     }
     return implode(' / ', $parts);
+}
+
+/** SVGをページに直接埋め込む（テーマの色を反映させるため） */
+function inline_svg(string $path): string
+{
+    $file = dirname(__DIR__) . '/' . $path;
+    if (!is_file($file)) {
+        return '';
+    }
+    $svg = (string)file_get_contents($file);
+    return preg_replace('/^<\?xml[^>]*>\s*/', '', $svg) ?? '';
 }

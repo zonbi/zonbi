@@ -74,6 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 render_header(config('app_name', '代行さん'));
 ?>
 <section class="hero">
+  <div class="hero-illust"><?= inline_svg('assets/img/hero.svg') ?></div>
   <h1>グッズの買い物代行、<br>注文をURLひとつでまとめよう</h1>
   <p>セッションを作ってURLを共有するだけ。依頼する人が「誰が・何を（名前・色・型）・何個・単価」を入力すると、合計額・人別の請求額・買い物リストが自動で整理されます。</p>
 </section>

@@ -481,3 +481,7 @@ a.sns:hover { text-decoration: underline; }
 .sns-ig { background: linear-gradient(45deg, #f58529, #dd2a7b, #8134af); }
 .sns-th { background: #333; }
 @media (prefers-color-scheme: dark) { .sns-x, .sns-th { background: #555; } }
+/* ---- トップのイラスト ---- */
+.hero-illust { margin: 0 -8px 8px; }
+.hero-illust svg { display: block; width: 100%; height: auto; max-height: 360px; }
+@media (max-width: 640px) { .hero-illust { margin: -4px -12px 4px; } }
