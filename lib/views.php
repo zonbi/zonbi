@@ -16,6 +16,14 @@ function render_header(string $title, string $bodyClass = ''): void
 <!doctype html>
 <html lang="ja">
 <head>
+<?php if (analytics_allowed()): ?>
+<script async src="https://www.googletagmanager.com/gtm.js?id=GTM-5TG69DSV"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+</script>
+<?php endif; ?>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
@@ -284,4 +292,23 @@ function inline_svg(string $path): string
     }
     $svg = (string)file_get_contents($file);
     return preg_replace('/^<\?xml[^>]*>\s*/', '', $svg) ?? '';
+}
+
+/**
+ * アクセス解析（Googleタグマネージャー）を読み込むページか。
+ * 管理キーなど秘密の値がURLに含まれるページ（管理ページ・似た商品まとめ・運営者コンソール等）では、
+ * URLがGoogleに送信されないよう読み込まない。
+ */
+function analytics_allowed(): bool
+{
+    $page = basename((string)($_SERVER['SCRIPT_NAME'] ?? ''));
+    if (in_array($page, ['admin.php', 'items.php', 'console.php', 'mypage.php', 'export.php', 'google_callback.php', 'login.php'], true)) {
+        return false;
+    }
+    foreach (['key', 'me', 'code', 'state'] as $secret) {
+        if (isset($_GET[$secret])) {
+            return false;
+        }
+    }
+    return true;
 }
