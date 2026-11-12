@@ -27,6 +27,7 @@ require __DIR__ . '/auth.php';
 require __DIR__ . '/moderation.php';
 require __DIR__ . '/related.php';
 require __DIR__ . '/grouping.php';
+require __DIR__ . '/formfields.php';
 
 // ---------------------------------------------------------------- 基本
 
@@ -239,17 +240,21 @@ function to_int_or_null($v): ?int
 }
 
 /**
- * 1件分の依頼入力を検証。エラーがあれば文字列配列を返す。
+ * 1件分の依頼入力を検証。エラーがあれば $errors に追加して null を返す。
+ * $ff: 入力項目設定（form_fields()）。$existing: 編集時の元データ（表示していない項目は元の値を保つ）
  */
-function validate_entry(array $row, array &$errors, string $label = ''): ?array
+function validate_entry(array $row, array &$errors, string $label = '', ?array $ff = null, ?array $existing = null): ?array
 {
+    $ff ??= default_form_fields();
+    $keep = fn(string $col, $empty) => $existing !== null ? ($existing[$col] ?? $empty) : $empty;
     $e = [
         'item_name'  => input_str($row, 'item_name', 200),
-        'color'      => input_str($row, 'color', 100),
-        'variant'    => input_str($row, 'variant', 100),
+        'color'      => field_on($ff, 'color') ? input_str($row, 'color', 100) : $keep('color', ''),
+        'size'       => field_on($ff, 'size') ? input_str($row, 'size', 100) : $keep('size', ''),
+        'variant'    => field_on($ff, 'shape') ? input_str($row, 'variant', 100) : $keep('variant', ''),
         'quantity'   => to_int_or_null($row['quantity'] ?? ''),
         'unit_price' => to_int_or_null($row['unit_price'] ?? ''),
-        'note'       => input_str($row, 'note', 500),
+        'note'       => field_on($ff, 'note') ? input_str($row, 'note', 500) : $keep('note', ''),
     ];
     $before = count($errors);
     if ($e['item_name'] === '') {
@@ -258,20 +263,61 @@ function validate_entry(array $row, array &$errors, string $label = ''): ?array
     if ($e['quantity'] === null || $e['quantity'] < 1 || $e['quantity'] > 9999) {
         $errors[] = $label . '個数は 1〜9999 の数字で入力してください。';
     }
-    // 単価は任意（空欄＝未定）
-    $rawPrice = is_string($row['unit_price'] ?? null) ? trim($row['unit_price']) : '';
-    if ($rawPrice !== '' && ($e['unit_price'] === null || $e['unit_price'] > 10000000)) {
-        $errors[] = $label . '単価は 0〜10,000,000 の数字（円）で入力するか、空欄にしてください。';
+    foreach (['color' => 'color', 'size' => 'size', 'shape' => 'variant', 'note' => 'note'] as $f => $col) {
+        if (field_required($ff, $f) && $e[$col] === '') {
+            $errors[] = $label . FORM_FIELD_DEFS[$f]['label'] . 'を入力してください。';
+        }
     }
-    if ($rawPrice === '') {
-        $e['unit_price'] = db_price(null);
+    // 単価: 表示しない設定なら元の値（新規は未定）。任意なら空欄＝未定
+    if (!field_on($ff, 'price')) {
+        $e['unit_price'] = $existing !== null ? ($existing['unit_price'] ?? db_price(null)) : db_price(null);
+    } else {
+        $rawPrice = is_string($row['unit_price'] ?? null) ? trim($row['unit_price']) : '';
+        if ($rawPrice !== '' && ($e['unit_price'] === null || $e['unit_price'] > 10000000)) {
+            $errors[] = $label . '価格は 0〜10,000,000 の数字（円）で入力' . (field_required($ff, 'price') ? 'してください。' : 'するか、空欄にしてください。');
+        } elseif ($rawPrice === '' && field_required($ff, 'price')) {
+            $errors[] = $label . '価格を入力してください。';
+        }
+        if ($rawPrice === '') {
+            $e['unit_price'] = db_price(null);
+        }
     }
     return count($errors) === $before ? $e : null;
 }
 
+/** 依頼を保存（新規）。size / requester_sns 列がないDBでは省略 */
+function insert_entry(int $sid, string $name, string $sns, array $v, string $ownerHash): int
+{
+    $cols = ['session_id', 'requester_name', 'item_name', 'color', 'variant', 'quantity', 'unit_price', 'note', 'owner_key'];
+    $vals = [$sid, $name, $v['item_name'], $v['color'], $v['variant'], $v['quantity'], $v['unit_price'], $v['note'], $ownerHash];
+    if (form_fields_ready()) {
+        array_push($cols, 'size', 'requester_sns');
+        array_push($vals, $v['size'], $sns);
+    }
+    db()->prepare('INSERT INTO shop_entries (' . implode(',', $cols) . ') VALUES (' . implode(',', array_fill(0, count($cols), '?')) . ')')->execute($vals);
+    return (int)db()->lastInsertId();
+}
+
+/** 依頼を更新 */
+function update_entry(int $entryId, string $name, ?string $sns, array $v): void
+{
+    $sets = 'requester_name=?, item_name=?, color=?, variant=?, quantity=?, unit_price=?, note=?';
+    $vals = [$name, $v['item_name'], $v['color'], $v['variant'], $v['quantity'], $v['unit_price'], $v['note']];
+    if (form_fields_ready()) {
+        $sets .= ', size=?';
+        $vals[] = $v['size'];
+        if ($sns !== null) {
+            $sets .= ', requester_sns=?';
+            $vals[] = $sns;
+        }
+    }
+    $vals[] = $entryId;
+    db()->prepare("UPDATE shop_entries SET $sets WHERE id=?")->execute($vals);
+}
+
 function row_is_blank(array $row): bool
 {
-    foreach (['item_name', 'color', 'variant', 'quantity', 'unit_price', 'note'] as $k) {
+    foreach (['item_name', 'color', 'size', 'variant', 'quantity', 'unit_price', 'note'] as $k) {
         if (is_string($row[$k] ?? null) && trim($row[$k]) !== '') {
             return false;
         }
@@ -363,7 +409,10 @@ function group_by_person(array $entries): array
     $out = [];
     foreach ($entries as $e) {
         $name = $e['requester_name'];
-        $out[$name] ??= ['name' => $name, 'entries' => [], 'quantity' => 0, 'total' => 0, 'unpriced' => 0];
+        $out[$name] ??= ['name' => $name, 'sns' => '', 'entries' => [], 'quantity' => 0, 'total' => 0, 'unpriced' => 0];
+        if ($out[$name]['sns'] === '' && ($e['requester_sns'] ?? '') !== '') {
+            $out[$name]['sns'] = $e['requester_sns'];
+        }
         $out[$name]['entries'][] = $e;
         $out[$name]['quantity'] += (int)$e['quantity'];
         $out[$name]['total'] += (int)line_total($e);
@@ -377,9 +426,9 @@ function group_by_item(array $entries): array
 {
     $out = [];
     foreach ($entries as $e) {
-        $k = mb_strtolower($e['item_name'] . "\0" . $e['color'] . "\0" . $e['variant'] . "\0" . (has_price($e) ? $e['unit_price'] : '-'));
+        $k = mb_strtolower($e['item_name'] . "\0" . $e['color'] . "\0" . ($e['size'] ?? '') . "\0" . $e['variant'] . "\0" . (has_price($e) ? $e['unit_price'] : '-'));
         $out[$k] ??= [
-            'item_name' => $e['item_name'], 'color' => $e['color'], 'variant' => $e['variant'],
+            'item_name' => $e['item_name'], 'color' => $e['color'], 'size' => $e['size'] ?? '', 'variant' => $e['variant'],
             'unit_price' => has_price($e) ? (int)$e['unit_price'] : null, 'quantity' => 0, 'purchased' => 0, 'total' => 0,
             'unpriced' => 0, 'people' => [],
         ];

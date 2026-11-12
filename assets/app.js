@@ -66,6 +66,13 @@
       });
     }
 
+    // SNSアカウント名を記憶
+    var snsInput = form.querySelector('[data-remember-sns]');
+    if (snsInput) {
+      if (!snsInput.value) snsInput.value = store.get('zonbi_sns', '');
+      form.addEventListener('submit', function () { store.set('zonbi_sns', snsInput.value.trim().replace(/^[@＠]+/, '')); });
+    }
+
     // 名前を記憶（次回入力を楽に）
     var nameInput = form.querySelector('[data-remember-name]');
     if (nameInput) {

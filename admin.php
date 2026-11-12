@@ -25,6 +25,10 @@ $base = $byKey ? ['id' => $publicId, 'key' => $key] : ['id' => $publicId];
 $user = current_user();
 $self = url('admin.php', $base + ['view' => $view]);
 $shareUrl = url('s.php', ['id' => $publicId]);
+$ff = form_fields($session);
+$detailHead = detail_header($ff);
+$showPrice = field_on($ff, 'price');
+$GLOBALS['admin_cols'] = ['detail' => $detailHead !== '', 'price' => $showPrice];
 
 $errors = [];
 
@@ -67,6 +71,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             break;
 
+        case 'update_form_fields':
+            if (save_form_fields($sid, form_fields_from_post($_POST))) {
+                flash('success', '依頼者の入力項目を保存しました。');
+            } else {
+                flash('error', '入力項目の設定にはデータベースの更新が必要です。phpMyAdmin で sql/migrations/007_add_form_fields.sql を実行してください。');
+            }
+            redirect($self . '#form-fields');
+
         case 'toggle_closed':
             db()->prepare('UPDATE shop_sessions SET is_closed = 1 - is_closed WHERE id=?')->execute([$sid]);
             flash('success', (int)$session['is_closed'] === 1 ? '受付を再開しました。' : '受付を締め切りました。');
@@ -98,10 +110,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($name === '') {
                 $errors[] = 'お名前を入力してください。';
             }
-            $v = validate_entry($_POST, $errors);
+            // 代行者の編集では「必須」は課さない（依頼者の入力不足を代行者が補えるように）
+            $ffAdmin = array_map(fn($x) => $x === FIELD_REQUIRED ? FIELD_OPTIONAL : $x, $ff);
+            $sns = validate_sns($ffAdmin, $_POST, $errors);
+            $v = validate_entry($_POST, $errors, '', $ffAdmin, $entry);
             if (!$errors) {
-                db()->prepare('UPDATE shop_entries SET requester_name=?, item_name=?, color=?, variant=?, quantity=?, unit_price=?, note=? WHERE id=?')
-                    ->execute([$name, $v['item_name'], $v['color'], $v['variant'], $v['quantity'], $v['unit_price'], $v['note'], $entry['id']]);
+                update_entry((int)$entry['id'], $name, field_on($ff, 'sns') ? $sns : null, $v);
                 moderate_entry((int)$entry['id'], false);
                 flash('success', '依頼を更新しました。');
                 redirect($self . '#e' . $entry['id']);
@@ -205,7 +219,7 @@ render_header('管理: ' . $session['title'], 'admin');
     <div><span>依頼者</span><strong><?= $sum['people'] ?>人</strong></div>
     <div><span>依頼件数</span><strong><?= $sum['count'] ?>件</strong></div>
     <div><span>総個数</span><strong><?= $sum['quantity'] ?>点</strong></div>
-    <div><span>総額</span><strong><?= total_html($sum['total'], $sum['unpriced']) ?></strong></div>
+    <?php if ($showPrice): ?><div><span>総額</span><strong><?= total_html($sum['total'], $sum['unpriced']) ?></strong></div><?php endif; ?>
   </div>
 
   <div class="actions">
@@ -239,10 +253,9 @@ render_header('管理: ' . $session['title'], 'admin');
     <?= csrf_field() ?>
     <input type="hidden" name="action" value="update_entry">
     <input type="hidden" name="entry_id" value="<?= (int)$editing['id'] ?>">
-    <label>お名前 <span class="req">必須</span>
-      <input type="text" name="requester_name" value="<?= h($editing['requester_name']) ?>" maxlength="50" required>
-    </label>
-    <?php render_entry_fields('', $editing); ?>
+    <?php $ffEdit = array_map(fn($x) => $x === FIELD_REQUIRED ? FIELD_OPTIONAL : $x, $ff); ?>
+    <?php render_requester_fields($ffEdit, (string)$editing['requester_name'], (string)($editing['requester_sns'] ?? '')); ?>
+    <?php render_entry_fields('', $editing, false, $ffEdit); ?>
     <div class="actions">
       <a class="btn btn-ghost" href="<?= h($self) ?>">キャンセル</a>
       <button type="submit" class="btn btn-primary">更新する</button>
@@ -265,12 +278,12 @@ render_header('管理: ' . $session['title'], 'admin');
   <?php foreach (group_by_person($entries) as $p): ?>
   <section class="card person-card">
     <div class="person-head">
-      <h2><?= h($p['name']) ?> さん</h2>
-      <div class="person-total"><?= $p['quantity'] ?>点 <strong><?= total_html($p['total'], $p['unpriced']) ?></strong></div>
+      <h2><?= h($p['name']) ?> さん <?= sns_html($p['sns']) ?></h2>
+      <div class="person-total"><?= $p['quantity'] ?>点<?php if ($showPrice): ?> <strong><?= total_html($p['total'], $p['unpriced']) ?></strong><?php endif; ?></div>
     </div>
     <div class="table-wrap">
     <table class="table">
-      <thead><tr><th>購入</th><th>商品名</th><th>色 / 型</th><th class="num">個数</th><th class="num">単価</th><th class="num">小計</th><th></th></tr></thead>
+      <thead><tr><th>購入</th><th>商品名</th><?php if ($detailHead): ?><th><?= h($detailHead) ?></th><?php endif; ?><th class="num">個数</th><?php if ($showPrice): ?><th class="num">単価</th><th class="num">小計</th><?php endif; ?><th></th></tr></thead>
       <tbody>
       <?php foreach ($p['entries'] as $e) { admin_entry_row($e, $self, $base, false); } ?>
       </tbody>
@@ -283,16 +296,16 @@ render_header('管理: ' . $session['title'], 'admin');
     <p class="muted small">同じ「商品名・色・型・単価」の依頼をまとめています。現地ではこのリストを見ながら購入できます。</p>
     <div class="table-wrap">
     <table class="table">
-      <thead><tr><th>商品名</th><th>色 / 型</th><th class="num">必要数</th><th class="num">購入済</th><th class="num">単価</th><th class="num">金額</th><th>内訳</th></tr></thead>
+      <thead><tr><th>商品名</th><?php if ($detailHead): ?><th><?= h($detailHead) ?></th><?php endif; ?><th class="num">必要数</th><th class="num">購入済</th><?php if ($showPrice): ?><th class="num">単価</th><th class="num">金額</th><?php endif; ?><th>内訳</th></tr></thead>
       <tbody>
       <?php foreach (group_by_item($entries) as $it): ?>
         <tr class="<?= $it['purchased'] >= $it['quantity'] ? 'done' : '' ?>">
           <td><?= h($it['item_name']) ?></td>
-          <td><?= h(item_label($it)) ?></td>
+          <?php if ($detailHead): ?><td><?= h(item_label($it)) ?></td><?php endif; ?>
           <td class="num"><strong><?= $it['quantity'] ?></strong></td>
           <td class="num"><?= $it['purchased'] ?></td>
-          <td class="num"><?= price_html($it['unit_price']) ?></td>
-          <td class="num"><?= yen($it['total']) ?></td>
+          <?php if ($showPrice): ?><td class="num"><?= price_html($it['unit_price']) ?></td>
+          <td class="num"><?= yen($it['total']) ?></td><?php endif; ?>
           <td class="small"><?php
             $parts = [];
             foreach ($it['people'] as $name => $q) {
@@ -303,7 +316,7 @@ render_header('管理: ' . $session['title'], 'admin');
         </tr>
       <?php endforeach; ?>
       </tbody>
-      <tfoot><tr><th colspan="2">合計</th><th class="num"><?= $sum['quantity'] ?></th><th></th><th></th><th class="num"><?= total_html($sum['total'], $sum['unpriced']) ?></th><th></th></tr></tfoot>
+      <tfoot><tr><th<?= $detailHead ? ' colspan="2"' : '' ?>>合計</th><th class="num"><?= $sum['quantity'] ?></th><th></th><?php if ($showPrice): ?><th></th><th class="num"><?= total_html($sum['total'], $sum['unpriced']) ?></th><?php endif; ?><th></th></tr></tfoot>
     </table>
     </div>
   </section>
@@ -311,15 +324,30 @@ render_header('管理: ' . $session['title'], 'admin');
   <section class="card">
     <div class="table-wrap">
     <table class="table">
-      <thead><tr><th>購入</th><th>依頼者</th><th>商品名</th><th>色 / 型</th><th class="num">個数</th><th class="num">単価</th><th class="num">小計</th><th></th></tr></thead>
+      <thead><tr><th>購入</th><th>依頼者</th><th>商品名</th><?php if ($detailHead): ?><th><?= h($detailHead) ?></th><?php endif; ?><th class="num">個数</th><?php if ($showPrice): ?><th class="num">単価</th><th class="num">小計</th><?php endif; ?><th></th></tr></thead>
       <tbody>
       <?php foreach ($entries as $e) { admin_entry_row($e, $self, $base, true); } ?>
       </tbody>
-      <tfoot><tr><th colspan="4">合計</th><th class="num"><?= $sum['quantity'] ?></th><th></th><th class="num"><?= total_html($sum['total'], $sum['unpriced']) ?></th><th></th></tr></tfoot>
+      <tfoot><tr><th colspan="<?= $detailHead ? 4 : 3 ?>">合計</th><th class="num"><?= $sum['quantity'] ?></th><?php if ($showPrice): ?><th></th><th class="num"><?= total_html($sum['total'], $sum['unpriced']) ?></th><?php endif; ?><th></th></tr></tfoot>
     </table>
     </div>
   </section>
 <?php endif; ?>
+
+<details class="card" id="form-fields"<?= ($_GET['ff'] ?? '') === '1' ? ' open' : '' ?>>
+  <summary><strong>依頼者の入力項目を設定</strong></summary>
+  <?php if (form_fields_ready()): ?>
+  <form method="post" action="<?= h($self) ?>">
+    <?= csrf_field() ?>
+    <input type="hidden" name="action" value="update_form_fields">
+    <?php render_form_fields_settings($ff); ?>
+    <p class="small muted">※項目を「表示しない」にしても、すでに入力された内容は消えません（管理ページ・CSVには残ります）。</p>
+    <button class="btn btn-primary">保存</button>
+  </form>
+  <?php else: ?>
+    <p class="small">入力項目の設定には、phpMyAdmin で <code>sql/migrations/007_add_form_fields.sql</code> の実行が必要です。</p>
+  <?php endif; ?>
+</details>
 
 <details class="card">
   <summary><strong>セッション情報を編集</strong></summary>
@@ -379,12 +407,13 @@ function admin_entry_row(array $e, string $self, array $base, bool $showName): v
       <button class="check <?= (int)$e['is_purchased'] === 1 ? 'on' : '' ?>" title="購入済みを切り替え" aria-label="購入済みを切り替え"><?= (int)$e['is_purchased'] === 1 ? '✓' : '' ?></button>
     </form>
   </td>
-  <?php if ($showName): ?><td><?= h($e['requester_name']) ?></td><?php endif; ?>
+  <?php $cols = $GLOBALS['admin_cols']; ?>
+  <?php if ($showName): ?><td><?= h($e['requester_name']) ?><?php if (($e['requester_sns'] ?? '') !== ''): ?><div class="note"><?= sns_html($e['requester_sns']) ?></div><?php endif; ?></td><?php endif; ?>
   <td><?= h($e['item_name']) ?><?php if ($e['note'] !== ''): ?><div class="note"><?= h($e['note']) ?></div><?php endif; ?></td>
-  <td><?= h(item_label($e)) ?></td>
+  <?php if ($cols['detail']): ?><td><?= h(item_label($e)) ?></td><?php endif; ?>
   <td class="num"><?= (int)$e['quantity'] ?></td>
-  <td class="num"><?= price_html($e['unit_price']) ?></td>
-  <td class="num"><?= line_total_html($e) ?></td>
+  <?php if ($cols['price']): ?><td class="num"><?= price_html($e['unit_price']) ?></td>
+  <td class="num"><?= line_total_html($e) ?></td><?php endif; ?>
   <td class="row-actions">
     <a class="btn btn-ghost btn-sm" href="<?= h(url('admin.php', $base + ['view' => $_GET['view'] ?? 'person', 'edit' => $id])) ?>#edit">編集</a>
     <form method="post" action="<?= h($self) ?>" data-confirm="<?= h($e['requester_name'] . ' さんの「' . $e['item_name'] . '」を削除しますか？') ?>">

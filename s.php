@@ -10,6 +10,10 @@ if (!$session) {
 $sid = (int)$session['id'];
 $publicId = $session['public_id'];
 $self = url('s.php', ['id' => $publicId]);
+$ff = form_fields($session);
+$detailHead = detail_header($ff);
+$showPrice = field_on($ff, 'price');
+$showSub = (bool)$ff['subtotal'];
 
 // 「あなた専用の編集URL」から来た場合: キーをこのブラウザに保存し、URLからキーを消す
 if (isset($_GET['me']) && is_string($_GET['me'])) {
@@ -29,6 +33,7 @@ $open = session_is_open($session);
 
 $errors = [];
 $postedName = '';
+$postedSns = '';
 $postedRows = [[]];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -41,6 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'add') {
         $postedName = input_str($_POST, 'requester_name', 50);
+        $postedSns = input_str($_POST, 'requester_sns', 60);
         $rows = is_array($_POST['rows'] ?? null) ? array_values($_POST['rows']) : [];
         $rows = array_values(array_filter($rows, fn($r) => is_array($r) && !row_is_blank($r)));
         $postedRows = $rows ?: [[]];
@@ -54,10 +60,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (count($rows) > 50) {
             $errors[] = '一度に登録できるのは50件までです。';
         }
+        $sns = validate_sns($ff, $_POST, $errors);
         $valid = [];
         foreach ($rows as $i => $r) {
             $label = count($rows) > 1 ? (($i + 1) . '行目: ') : '';
-            $v = validate_entry($r, $errors, $label);
+            $v = validate_entry($r, $errors, $label, $ff);
             if ($v) {
                 $valid[] = $v;
             }
@@ -65,13 +72,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$errors) {
             $pdo = db();
             $pdo->beginTransaction();
-            $st = $pdo->prepare('INSERT INTO shop_entries
-                (session_id, requester_name, item_name, color, variant, quantity, unit_price, note, owner_key)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
             $newIds = [];
             foreach ($valid as $v) {
-                $st->execute([$sid, $postedName, $v['item_name'], $v['color'], $v['variant'], $v['quantity'], $v['unit_price'], $v['note'], $owner]);
-                $newIds[] = (int)$pdo->lastInsertId();
+                $newIds[] = insert_entry($sid, $postedName, $sns, $v, $owner);
             }
             $pdo->commit();
             foreach ($newIds as $nid) {
@@ -95,10 +98,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($name === '') {
             $errors[] = 'お名前を入力してください。';
         }
-        $v = validate_entry($_POST, $errors);
+        $sns = validate_sns($ff, $_POST, $errors);
+        $v = validate_entry($_POST, $errors, '', $ff, $entry);
         if (!$errors) {
-            db()->prepare('UPDATE shop_entries SET requester_name=?, item_name=?, color=?, variant=?, quantity=?, unit_price=?, note=? WHERE id=?')
-                ->execute([$name, $v['item_name'], $v['color'], $v['variant'], $v['quantity'], $v['unit_price'], $v['note'], $entry['id']]);
+            update_entry((int)$entry['id'], $name, field_on($ff, 'sns') ? $sns : null, $v);
             moderate_entry((int)$entry['id'], false);
             flash('success', '依頼を更新しました。');
             redirect($self . '#mine');
@@ -148,10 +151,8 @@ render_header($session['title']);
     <?= csrf_field() ?>
     <input type="hidden" name="action" value="update">
     <input type="hidden" name="entry_id" value="<?= (int)$editing['id'] ?>">
-    <label>お名前 <span class="req">必須</span>
-      <input type="text" name="requester_name" value="<?= h($editing['requester_name']) ?>" maxlength="50" required>
-    </label>
-    <?php render_entry_fields('', $editing); ?>
+    <?php render_requester_fields($ff, (string)$editing['requester_name'], (string)($editing['requester_sns'] ?? '')); ?>
+    <?php render_entry_fields('', $editing, false, $ff); ?>
     <div class="actions">
       <a class="btn btn-ghost" href="<?= h($self) ?>#mine">キャンセル</a>
       <button type="submit" class="btn btn-primary">更新する</button>
@@ -165,20 +166,18 @@ render_header($session['title']);
   <form method="post" action="<?= h($self) ?>" data-entry-form>
     <?= csrf_field() ?>
     <input type="hidden" name="action" value="add">
-    <label>1. お名前（誰が） <span class="req">必須</span>
-      <input type="text" name="requester_name" value="<?= h($postedName) ?>" maxlength="50" required placeholder="例: さや / @oshi_love" data-remember-name>
-    </label>
-    <p class="muted small">2.〜4. 欲しいグッズを入力してください。複数ある場合は「＋ 商品を追加」で行を増やせます。</p>
+    <?php render_requester_fields($ff, $postedName, $postedSns, true, '1. '); ?>
+    <p class="muted small">2. 欲しいグッズを入力してください。複数ある場合は「＋ 商品を追加」で行を増やせます。</p>
     <div data-rows>
       <?php foreach ($postedRows as $i => $r) {
-          render_entry_fields("rows[$i]", $r, true);
+          render_entry_fields("rows[$i]", $r, true, $ff);
       } ?>
     </div>
     <template data-row-template>
-      <?php render_entry_fields('rows[__INDEX__]', [], true); ?>
+      <?php render_entry_fields('rows[__INDEX__]', [], true, $ff); ?>
     </template>
     <button type="button" class="btn btn-ghost btn-block" data-add-row>＋ 商品を追加</button>
-    <div class="form-total">合計 <strong data-form-total>¥0</strong></div>
+    <?php if ($showSub): ?><div class="form-total">合計 <strong data-form-total>¥0</strong></div><?php endif; ?>
     <p class="consent-note">送信すると<a href="<?= h(url('terms.php')) ?>" target="_blank">利用規約・免責事項</a>に同意したものとみなします。代行の取引は代行者とあなたの間で行われ、本サービスの運営者は関与しません。</p>
     <button type="submit" class="btn btn-primary btn-block">この内容で依頼する</button>
   </form>
@@ -198,15 +197,15 @@ render_header($session['title']);
       <?php if (count($mineByPerson) > 1): ?><h3><?= h($p['name']) ?> さん</h3><?php endif; ?>
       <div class="table-wrap">
       <table class="table">
-        <thead><tr><th>商品名</th><th>色 / 型</th><th class="num">個数</th><th class="num">単価</th><th class="num">小計</th><?php if ($open): ?><th></th><?php endif; ?></tr></thead>
+        <thead><tr><th>商品名</th><?php if ($detailHead): ?><th><?= h($detailHead) ?></th><?php endif; ?><th class="num">個数</th><?php if ($showPrice): ?><th class="num">単価</th><?php endif; ?><?php if ($showSub): ?><th class="num">小計</th><?php endif; ?><?php if ($open): ?><th></th><?php endif; ?></tr></thead>
         <tbody>
         <?php foreach ($p['entries'] as $e): ?>
           <tr>
             <td><?= h($e['item_name']) ?><?php if ($e['note'] !== ''): ?><div class="note"><?= h($e['note']) ?></div><?php endif; ?></td>
-            <td><?= h(item_label($e)) ?></td>
+            <?php if ($detailHead): ?><td><?= h(item_label($e)) ?></td><?php endif; ?>
             <td class="num"><?= (int)$e['quantity'] ?></td>
-            <td class="num"><?= price_html($e['unit_price']) ?></td>
-            <td class="num"><?= line_total_html($e) ?></td>
+            <?php if ($showPrice): ?><td class="num"><?= price_html($e['unit_price']) ?></td><?php endif; ?>
+            <?php if ($showSub): ?><td class="num"><?= line_total_html($e) ?></td><?php endif; ?>
             <?php if ($open): ?>
             <td class="row-actions">
               <a class="btn btn-ghost btn-sm" href="<?= h(url('s.php', ['id' => $publicId, 'edit' => $e['id']])) ?>">編集</a>
@@ -221,12 +220,12 @@ render_header($session['title']);
           </tr>
         <?php endforeach; ?>
         </tbody>
-        <tfoot><tr><th colspan="2">合計</th><th class="num"><?= (int)$p['quantity'] ?></th><th></th><th class="num"><?= total_html($p['total'], $p['unpriced']) ?></th><?php if ($open): ?><th></th><?php endif; ?></tr></tfoot>
+        <tfoot><tr><th<?= $detailHead ? ' colspan="2"' : '' ?>>合計</th><th class="num"><?= (int)$p['quantity'] ?></th><?php if ($showPrice): ?><th></th><?php endif; ?><?php if ($showSub): ?><th class="num"><?= total_html($p['total'], $p['unpriced']) ?></th><?php endif; ?><?php if ($open): ?><th></th><?php endif; ?></tr></tfoot>
       </table>
       </div>
     <?php endforeach; ?>
     <?php if (count($mineByPerson) > 1): ?>
-      <p class="grand-total">総合計 <?= (int)$mineTotal['quantity'] ?>点 <strong><?= total_html($mineTotal['total'], $mineTotal['unpriced']) ?></strong></p>
+      <p class="grand-total">総合計 <?= (int)$mineTotal['quantity'] ?>点<?php if ($showSub): ?> <strong><?= total_html($mineTotal['total'], $mineTotal['unpriced']) ?></strong><?php endif; ?></p>
     <?php endif; ?>
     <div class="url-box edit-url-box">
       <label><strong>あなた専用の編集URL</strong></label>
@@ -248,24 +247,24 @@ render_header($session['title']);
       <div><span>依頼者</span><strong><?= $allSum['people'] ?>人</strong></div>
       <div><span>依頼件数</span><strong><?= $allSum['count'] ?>件</strong></div>
       <div><span>総個数</span><strong><?= $allSum['quantity'] ?>点</strong></div>
-      <div><span>総額</span><strong><?= total_html($allSum['total'], $allSum['unpriced']) ?></strong></div>
+      <?php if ($showSub): ?><div><span>総額</span><strong><?= total_html($allSum['total'], $allSum['unpriced']) ?></strong></div><?php endif; ?>
     </div>
     <?php foreach (group_by_person($all) as $p): ?>
       <div class="person-head person-head-sub">
         <h3><?= h($p['name']) ?> さん</h3>
-        <div class="person-total"><?= $p['quantity'] ?>点 <strong><?= total_html($p['total'], $p['unpriced']) ?></strong></div>
+        <div class="person-total"><?= $p['quantity'] ?>点<?php if ($showSub): ?> <strong><?= total_html($p['total'], $p['unpriced']) ?></strong><?php endif; ?></div>
       </div>
       <div class="table-wrap">
       <table class="table">
-        <thead><tr><th>商品名</th><th>色 / 型</th><th class="num">個数</th><th class="num">単価</th><th class="num">小計</th><th>購入</th></tr></thead>
+        <thead><tr><th>商品名</th><?php if ($detailHead): ?><th><?= h($detailHead) ?></th><?php endif; ?><th class="num">個数</th><?php if ($showPrice): ?><th class="num">単価</th><?php endif; ?><?php if ($showSub): ?><th class="num">小計</th><?php endif; ?><th>購入</th></tr></thead>
         <tbody>
         <?php foreach ($p['entries'] as $e): ?>
           <tr class="<?= (int)$e['is_purchased'] === 1 ? 'done' : '' ?>">
             <td><?= h($e['item_name']) ?><?php if (hash_equals($e['owner_key'], $owner)): ?> <span class="badge badge-mine">あなた</span><?php endif; ?><?php if ($e['note'] !== ''): ?><div class="note"><?= h($e['note']) ?></div><?php endif; ?></td>
-            <td><?= h(item_label($e)) ?></td>
+            <?php if ($detailHead): ?><td><?= h(item_label($e)) ?></td><?php endif; ?>
             <td class="num"><?= (int)$e['quantity'] ?></td>
-            <td class="num"><?= price_html($e['unit_price']) ?></td>
-            <td class="num"><?= line_total_html($e) ?></td>
+            <?php if ($showPrice): ?><td class="num"><?= price_html($e['unit_price']) ?></td><?php endif; ?>
+            <?php if ($showSub): ?><td class="num"><?= line_total_html($e) ?></td><?php endif; ?>
             <td><?= (int)$e['is_purchased'] === 1 ? '✓ 購入済' : '' ?></td>
           </tr>
         <?php endforeach; ?>
@@ -278,15 +277,15 @@ render_header($session['title']);
       <summary><strong>商品別の合計を見る</strong></summary>
       <div class="table-wrap">
       <table class="table">
-        <thead><tr><th>商品名</th><th>色 / 型</th><th class="num">合計数</th><th class="num">単価</th><th class="num">金額</th></tr></thead>
+        <thead><tr><th>商品名</th><?php if ($detailHead): ?><th><?= h($detailHead) ?></th><?php endif; ?><th class="num">合計数</th><?php if ($showPrice): ?><th class="num">単価</th><?php endif; ?><?php if ($showSub): ?><th class="num">金額</th><?php endif; ?></tr></thead>
         <tbody>
         <?php foreach (group_by_item($all) as $it): ?>
           <tr>
             <td><?= h($it['item_name']) ?></td>
-            <td><?= h(item_label($it)) ?></td>
+            <?php if ($detailHead): ?><td><?= h(item_label($it)) ?></td><?php endif; ?>
             <td class="num"><?= $it['quantity'] ?></td>
-            <td class="num"><?= price_html($it['unit_price']) ?></td>
-            <td class="num"><?= yen($it['total']) ?></td>
+            <?php if ($showPrice): ?><td class="num"><?= price_html($it['unit_price']) ?></td><?php endif; ?>
+            <?php if ($showSub): ?><td class="num"><?= yen($it['total']) ?></td><?php endif; ?>
           </tr>
         <?php endforeach; ?>
         </tbody>

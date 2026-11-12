@@ -13,30 +13,30 @@ $entries = fetch_entries((int)$session['id']);
 $rows = [];
 switch ($type) {
     case 'person':
-        $rows[] = ['依頼者', '点数', '合計金額', '単価未定の件数', '内訳'];
+        $rows[] = ['依頼者', 'SNSアカウント（@なし）', '点数', '合計金額', '単価未定の件数', '内訳'];
         foreach (group_by_person($entries) as $p) {
             $detail = array_map(
-                fn($e) => $e['item_name'] . ($e['color'] !== '' ? "（{$e['color']}）" : '') . ($e['variant'] !== '' ? "［{$e['variant']}］" : '') . '×' . $e['quantity'] . (has_price($e) ? '' : '（単価未定）'),
+                fn($e) => $e['item_name'] . (item_label($e) !== '—' ? '（' . item_label($e) . '）' : '') . '×' . $e['quantity'] . (has_price($e) ? '' : '（単価未定）'),
                 $p['entries']
             );
-            $rows[] = [$p['name'], $p['quantity'], $p['total'], $p['unpriced'], implode(' / ', $detail)];
+            $rows[] = [$p['name'], $p['sns'], $p['quantity'], $p['total'], $p['unpriced'], implode(' / ', $detail)];
         }
         break;
     case 'item':
-        $rows[] = ['商品名', '色', '型', '単価', '必要数', '購入済', '金額', '内訳'];
+        $rows[] = ['商品名', '色', 'サイズ', '形', '単価', '必要数', '購入済', '金額', '内訳'];
         foreach (group_by_item($entries) as $it) {
             $people = [];
             foreach ($it['people'] as $n => $q) {
                 $people[] = "{$n}×{$q}";
             }
-            $rows[] = [$it['item_name'], $it['color'], $it['variant'], $it['unit_price'] ?? '未定', $it['quantity'], $it['purchased'], $it['unit_price'] === null ? '' : $it['total'], implode(' / ', $people)];
+            $rows[] = [$it['item_name'], $it['color'], $it['size'], $it['variant'], $it['unit_price'] ?? '未定', $it['quantity'], $it['purchased'], $it['unit_price'] === null ? '' : $it['total'], implode(' / ', $people)];
         }
         break;
     default:
-        $rows[] = ['No', '依頼者', '商品名', '色', '型', '個数', '単価', '小計', 'メモ', '購入済', '登録日時'];
+        $rows[] = ['No', '依頼者', 'SNSアカウント（@なし）', '商品名', '色', 'サイズ', '形', '個数', '単価', '小計', 'コメント', '購入済', '登録日時'];
         foreach ($entries as $i => $e) {
             $rows[] = [
-                $i + 1, $e['requester_name'], $e['item_name'], $e['color'], $e['variant'],
+                $i + 1, $e['requester_name'], $e['requester_sns'] ?? '', $e['item_name'], $e['color'], $e['size'] ?? '', $e['variant'],
                 $e['quantity'], has_price($e) ? $e['unit_price'] : '未定', line_total($e) ?? '',
                 $e['note'], (int)$e['is_purchased'] === 1 ? '済' : '', $e['created_at'],
             ];

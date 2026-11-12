@@ -13,6 +13,8 @@ $base = is_admin_key_valid($session, $key) ? ['id' => $session['public_id'], 'ke
 $sort = ($_GET['sort'] ?? '') === 'name' ? 'name' : 'qty';
 $self = url('items.php', $base + ['sort' => $sort]);
 $manualReady = group_label_ready();
+$ff = form_fields($session);
+$showPrice = field_on($ff, 'price');
 
 /** POSTされた依頼IDのうち、このセッションのものだけ返す */
 function posted_entry_ids(int $sid): array
@@ -97,7 +99,7 @@ render_header('似た商品まとめ: ' . $session['title'], 'items-page');
     <div><span>商品の種類</span><strong><?= count($groups) ?></strong></div>
     <div><span>総個数</span><strong><?= $sum['quantity'] ?>点</strong></div>
     <div><span>購入済み</span><strong><?= array_sum(array_column($groups, 'purchased')) ?>点</strong></div>
-    <div><span>総額</span><strong><?= total_html($sum['total'], $sum['unpriced']) ?></strong></div>
+    <?php if ($showPrice): ?><div><span>総額</span><strong><?= total_html($sum['total'], $sum['unpriced']) ?></strong></div><?php endif; ?>
   </div>
   <div class="actions no-print">
     <a class="btn btn-ghost btn-sm<?= $sort === 'qty' ? ' is-on' : '' ?>" href="<?= h(url('items.php', $base + ['sort' => 'qty'])) ?>">個数の多い順</a>
@@ -128,7 +130,7 @@ render_header('似た商品まとめ: ' . $session['title'], 'items-page');
       </div>
       <div class="group-total">
         <strong><?= (int)$g['quantity'] ?></strong><span>個</span>
-        <div class="small muted"><?= count($g['people']) ?>人・<?= total_html($g['total'], $g['unpriced']) ?></div>
+        <div class="small muted"><?= count($g['people']) ?>人<?php if ($showPrice): ?>・<?= total_html($g['total'], $g['unpriced']) ?><?php endif; ?></div>
         <div class="progress" title="購入済み <?= (int)$g['purchased'] ?> / <?= (int)$g['quantity'] ?>"><i style="width: <?= $g['quantity'] ? round($g['purchased'] / $g['quantity'] * 100) : 0 ?>%"></i></div>
         <div class="small muted">購入済み <?= (int)$g['purchased'] ?> / <?= (int)$g['quantity'] ?></div>
       </div>
@@ -141,16 +143,16 @@ render_header('似た商品まとめ: ' . $session['title'], 'items-page');
 
     <div class="table-wrap">
     <table class="table group-table">
-      <thead><tr><th class="no-print">選択</th><th>依頼者</th><th>入力された商品名</th><th>色 / 型</th><th class="num">個数</th><th class="num">単価</th><th>購入</th></tr></thead>
+      <thead><tr><th class="no-print">選択</th><th>依頼者</th><th>入力された商品名</th><th>色 / サイズ / 形</th><th class="num">個数</th><?php if ($showPrice): ?><th class="num">単価</th><?php endif; ?><th>購入</th></tr></thead>
       <tbody>
       <?php foreach ($g['entries'] as $e): ?>
         <tr class="<?= (int)$e['is_purchased'] === 1 ? 'done' : '' ?>">
           <td class="no-print"><input type="checkbox" name="entry_ids[]" value="<?= (int)$e['id'] ?>" form="regroup-form" aria-label="選択" data-pick></td>
-          <td><?= h($e['requester_name']) ?></td>
+          <td><?= h($e['requester_name']) ?><?php if (($e['requester_sns'] ?? '') !== ''): ?><div class="note"><?= sns_html($e['requester_sns']) ?></div><?php endif; ?></td>
           <td><?= h($e['item_name']) ?><?php if ($e['note'] !== ''): ?><div class="note"><?= h($e['note']) ?></div><?php endif; ?></td>
           <td><?= h(item_label($e)) ?></td>
           <td class="num"><?= (int)$e['quantity'] ?></td>
-          <td class="num"><?= price_html($e['unit_price']) ?></td>
+          <?php if ($showPrice): ?><td class="num"><?= price_html($e['unit_price']) ?></td><?php endif; ?>
           <td><button type="submit" form="tp<?= (int)$e['id'] ?>" class="check <?= (int)$e['is_purchased'] === 1 ? 'on' : '' ?>" aria-label="購入済みを切り替え"><?= (int)$e['is_purchased'] === 1 ? '✓' : '' ?></button></td>
         </tr>
       <?php endforeach; ?>

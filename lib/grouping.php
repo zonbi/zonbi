@@ -205,8 +205,8 @@ function group_similar_items(array $entries): array
         $g['unpriced'] += has_price($e) ? 0 : 1;
         $g['people'][$e['requester_name']] = ($g['people'][$e['requester_name']] ?? 0) + $q;
         $g['spellings'][$e['item_name']] = ($g['spellings'][$e['item_name']] ?? 0) + $q;
-        $vk = mb_strtolower(group_norm((string)$e['color']) . "\0" . group_norm((string)$e['variant']));
-        $g['variants'][$vk] ??= ['color' => $e['color'], 'variant' => $e['variant'], 'quantity' => 0];
+        $vk = mb_strtolower(group_norm((string)$e['color']) . "\0" . group_norm((string)($e['size'] ?? '')) . "\0" . group_norm((string)$e['variant']));
+        $g['variants'][$vk] ??= ['color' => $e['color'], 'size' => $e['size'] ?? '', 'variant' => $e['variant'], 'quantity' => 0];
         $g['variants'][$vk]['quantity'] += $q;
         unset($g);
     }

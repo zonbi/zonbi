@@ -62,6 +62,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 flash('error', '「みんなの依頼を公開」を設定できませんでした。phpMyAdmin で sql/migrations/001_add_show_all.sql を実行してください。');
             }
         }
+        if (form_fields_ready()) {
+            save_form_fields($newId, form_fields_from_post($_POST));
+        }
         moderate_session($newId, true);
         flash('success', 'セッションを作成しました。このページ（管理用URL）は必ずブックマークしてください。');
         redirect(url('admin.php', ['id' => $publicId, 'key' => $adminKey, 'new' => 1]));
@@ -103,6 +106,12 @@ render_header(config('app_name', '代行さん'));
       <input type="checkbox" name="show_all" value="1"<?= !empty($_POST['show_all']) ? ' checked' : '' ?>>
       みんなの依頼を記入者全員に公開する（あとから変更できます）
     </label>
+    <?php if (form_fields_ready()): ?>
+    <details class="ff-create">
+      <summary>依頼者の入力項目を選ぶ（あとから管理ページでも変更できます）</summary>
+      <?php render_form_fields_settings(!empty($_POST) ? form_fields_from_post($_POST) : default_form_fields()); ?>
+    </details>
+    <?php endif; ?>
     <label class="checkbox consent">
       <input type="checkbox" name="agree" value="1" required<?= !empty($_POST['agree']) ? ' checked' : '' ?>>
       <span><a href="<?= h(url('terms.php')) ?>" target="_blank">利用規約・免責事項</a>に同意します（代行に関するトラブルは当事者間で解決し、運営者は関与しません）</span>

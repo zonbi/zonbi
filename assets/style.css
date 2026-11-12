@@ -435,3 +435,32 @@ a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px soli
   .group-total strong { color: #000; }
   .table.stack thead { display: table-header-group !important; }
 }
+
+/* ---- 入力項目の設定 ---- */
+.ff-settings { margin: 8px 0 12px; }
+.ff-grid { display: grid; gap: 8px; }
+@media (min-width: 720px) { .ff-grid { grid-template-columns: 1fr 1fr; } }
+.ff-item { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--card); }
+.ff-item.is-disabled { opacity: .5; }
+.ff-label { display: flex; flex-direction: column; min-width: 0; flex: 1 1 160px; }
+.ff-label strong { font-size: .9rem; }
+.ff-label .small { font-size: .72rem; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; flex: none; }
+.seg label { margin: 0; font-weight: 600; font-size: .78rem; }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg span { display: block; padding: 6px 12px; cursor: pointer; color: var(--muted); }
+.seg input:checked + span { background: var(--primary); color: var(--btn-text, #fff); }
+.seg input:focus-visible + span { outline: 2px solid var(--primary); outline-offset: -2px; }
+.switch { display: inline-flex; gap: 6px; align-items: center; margin: 0; font-size: .85rem; }
+.ff-create { margin: 4px 0 14px; border: 1px dashed var(--line); border-radius: var(--radius-sm); padding: 10px 12px; }
+.ff-create summary { cursor: pointer; font-size: .9rem; font-weight: 600; }
+.input-prefix { display: flex; align-items: stretch; margin-top: 4px; }
+.input-prefix > span { display: flex; align-items: center; padding: 0 12px; background: var(--bg); border: 1px solid var(--line); border-right: 0; border-radius: var(--radius-sm) 0 0 var(--radius-sm); color: var(--muted); font-weight: 700; }
+.input-prefix input { margin: 0 !important; border-radius: 0 var(--radius-sm) var(--radius-sm) 0 !important; }
+.sns { font-size: .8em; font-weight: 600; color: var(--primary); }
+/* 入力欄の並び（項目数が変わっても崩れないように） */
+@media (min-width: 720px) {
+  .entry-row .grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+  .entry-row .grid .f-item { grid-column: span 2; }
+  .entry-row .grid .f-note { grid-column: 1 / -1; }
+}

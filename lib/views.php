@@ -88,37 +88,52 @@ function render_errors(array $errors): void
 }
 
 /**
- * 依頼1件ぶんの入力欄。$prefix は name 属性の接頭辞（例: "rows[0]"）。
+ * 依頼1件ぶんの入力欄。$prefix は name 属性の接頭辞（例: "rows[0]"）。$ff は入力項目設定。
  */
-function render_entry_fields(string $prefix, array $v = [], bool $removable = false): void
+function render_entry_fields(string $prefix, array $v = [], bool $removable = false, ?array $ff = null): void
 {
+    $ff ??= default_form_fields();
     $n = fn(string $k) => $prefix === '' ? $k : $prefix . '[' . $k . ']';
+    $badge = fn(string $k) => field_required($ff, $k) ? ' <span class="req">必須</span>' : '';
     $qty = $v['quantity'] ?? '1';
     $price = $v['unit_price'] ?? '';
     ?>
 <fieldset class="entry-row" data-entry-row>
   <div class="grid">
-    <label class="span-2">商品名 <span class="req">必須</span>
+    <label class="span-2 f-item">商品名 <span class="req">必須</span>
       <input type="text" name="<?= h($n('item_name')) ?>" value="<?= h($v['item_name'] ?? '') ?>" maxlength="200" placeholder="例: アクリルスタンド">
     </label>
-    <label>色
+    <?php if (field_on($ff, 'color')): ?>
+    <label>色<?= $badge('color') ?>
       <input type="text" name="<?= h($n('color')) ?>" value="<?= h($v['color'] ?? '') ?>" maxlength="100" placeholder="例: 青 / ○○担当カラー">
     </label>
-    <label>型・種類
-      <input type="text" name="<?= h($n('variant')) ?>" value="<?= h($v['variant'] ?? '') ?>" maxlength="100" placeholder="例: Aタイプ / Mサイズ">
+    <?php endif; ?>
+    <?php if (field_on($ff, 'size')): ?>
+    <label>サイズ<?= $badge('size') ?>
+      <input type="text" name="<?= h($n('size')) ?>" value="<?= h($v['size'] ?? '') ?>" maxlength="100" placeholder="例: M / L / フリー">
     </label>
+    <?php endif; ?>
+    <?php if (field_on($ff, 'shape')): ?>
+    <label>形（型・種類）<?= $badge('shape') ?>
+      <input type="text" name="<?= h($n('variant')) ?>" value="<?= h($v['variant'] ?? '') ?>" maxlength="100" placeholder="例: Aタイプ / 丸型">
+    </label>
+    <?php endif; ?>
     <label>個数 <span class="req">必須</span>
       <input type="number" name="<?= h($n('quantity')) ?>" value="<?= h($qty) ?>" min="1" max="9999" inputmode="numeric" data-qty>
     </label>
-    <label>単価（円）
-      <input type="number" name="<?= h($n('unit_price')) ?>" value="<?= h($price) ?>" min="0" max="10000000" inputmode="numeric" placeholder="未定なら空欄" data-price>
+    <?php if (field_on($ff, 'price')): ?>
+    <label>価格（円）<?= $badge('price') ?>
+      <input type="number" name="<?= h($n('unit_price')) ?>" value="<?= h($price) ?>" min="0" max="10000000" inputmode="numeric" placeholder="<?= field_required($ff, 'price') ? '例: 1500' : '未定なら空欄' ?>" data-price>
     </label>
-    <label class="span-2">メモ
+    <?php endif; ?>
+    <?php if (field_on($ff, 'note')): ?>
+    <label class="span-2 f-note">コメント<?= $badge('note') ?>
       <input type="text" name="<?= h($n('note')) ?>" value="<?= h($v['note'] ?? '') ?>" maxlength="500" placeholder="例: 売り切れなら不要 / 第2希望は赤">
     </label>
+    <?php endif; ?>
   </div>
   <div class="row-foot">
-    <span class="row-total">小計 <strong data-row-total>¥0</strong></span>
+    <?php if ($ff['subtotal']): ?><span class="row-total">小計 <strong data-row-total>¥0</strong></span><?php else: ?><span></span><?php endif; ?>
     <?php if ($removable): ?>
       <button type="button" class="btn btn-ghost btn-sm" data-remove-row>この行を削除</button>
     <?php endif; ?>
@@ -127,9 +142,23 @@ function render_entry_fields(string $prefix, array $v = [], bool $removable = fa
 <?php
 }
 
+/** 依頼者のお名前・SNS欄 */
+function render_requester_fields(array $ff, string $name, string $sns, bool $remember = false, string $numberPrefix = ''): void
+{
+    ?>
+    <label><?= h($numberPrefix) ?>お名前（誰が） <span class="req">必須</span>
+      <input type="text" name="requester_name" value="<?= h($name) ?>" maxlength="50" required placeholder="例: さや"<?= $remember ? ' data-remember-name' : '' ?>>
+    </label>
+    <?php if (field_on($ff, 'sns')): ?>
+    <label>SNSアカウント名<?= field_required($ff, 'sns') ? ' <span class="req">必須</span>' : '' ?>
+      <span class="input-prefix"><span>@</span><input type="text" name="requester_sns" value="<?= h($sns) ?>" maxlength="31" placeholder="oshi_love" autocomplete="off" autocapitalize="off" spellcheck="false"<?= field_required($ff, 'sns') ? ' required' : '' ?><?= $remember ? ' data-remember-sns' : '' ?>></span>
+    </label>
+    <?php endif;
+}
+
 function item_label(array $e): string
 {
-    $parts = array_filter([$e['color'] ?? '', $e['variant'] ?? ''], fn($s) => $s !== '');
+    $parts = array_filter([$e['color'] ?? '', $e['size'] ?? '', $e['variant'] ?? ''], fn($s) => (string)$s !== '');
     return $parts ? implode(' / ', $parts) : '—';
 }
 
@@ -212,4 +241,16 @@ function current_theme(): string
 {
     $t = (string)config('theme', 'sakura');
     return preg_match('/^[a-z0-9_-]{1,32}$/', $t) && is_file(dirname(__DIR__) . '/assets/themes/' . $t . '.css') ? $t : '';
+}
+
+/** 「色 / サイズ / 形」列の見出し（どれも表示しない設定なら空文字） */
+function detail_header(array $ff): string
+{
+    $parts = [];
+    foreach (['color' => '色', 'size' => 'サイズ', 'shape' => '形'] as $k => $lab) {
+        if (field_on($ff, $k)) {
+            $parts[] = $lab;
+        }
+    }
+    return implode(' / ', $parts);
 }

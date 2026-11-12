@@ -334,7 +334,7 @@ render_header('運営者コンソール', 'console');
       <tbody>
       <?php foreach ($entries as $e): ?>
         <tr class="<?= $e['flag_words'] !== '' && $e['reviewed_at'] === null ? 'flagged' : '' ?>">
-          <td><?= h($e['requester_name']) ?></td>
+          <td><?= h($e['requester_name']) ?><?php if (($e['requester_sns'] ?? '') !== ''): ?><div class="note"><?= sns_html($e['requester_sns']) ?></div><?php endif; ?></td>
           <td><?= h($e['item_name']) ?> <span class="muted small"><?= h(item_label($e)) ?></span><?php if ($e['note'] !== ''): ?><div class="note"><?= h($e['note']) ?></div><?php endif; ?></td>
           <td class="num"><?= (int)$e['quantity'] ?></td>
           <td class="num"><?= price_html($e['unit_price']) ?></td>
