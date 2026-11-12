@@ -84,7 +84,7 @@ function render_footer(): void
     <a href="<?= h(url('about.php')) ?>">運営者情報</a>
   </nav>
   <?php if (affiliate_enabled() || has_ad_slots()): ?>
-  <p class="aff-disclosure">当サイトはアフィリエイトプログラム等の広告を掲載しており、広告（PR）経由の購入により運営者が収益を得ることがあります。<?php if (amazon_enabled() || ads_contain('amazon.')): ?><br>Amazonのアソシエイトとして、<?= h(operator('name') !== '' ? operator('name') : '当サイト運営者') ?>は適格販売により収入を得ています。<?php endif; ?></p>
+  <p class="aff-disclosure">当サイトはアフィリエイトプログラム等の広告を掲載しており、広告（PR）経由の購入により運営者が収益を得ることがあります。<?php if (amazon_enabled() || ads_have_amazon_tag()): ?><br>Amazonのアソシエイトとして、<?= h(operator('name') !== '' ? operator('name') : '当サイト運営者') ?>は適格販売により収入を得ています。<?php endif; ?></p>
   <?php endif; ?>
   <p>© <?= date('Y') ?> <?= h(operator('name') !== '' ? operator('name') : config('app_name', '代行さん')) ?></p>
 </footer>
@@ -225,10 +225,16 @@ function ad_html(string $name): string
     return trim(preg_replace('/<!--.*?-->/s', '', $html) ?? '') === '' ? '' : $html;
 }
 
+/** 枠の中身が広告か（data-no-pr を付けたお知らせ・お願い等は広告として扱わない） */
+function ad_is_promo(string $html): bool
+{
+    return $html !== '' && stripos($html, 'data-no-pr') === false;
+}
+
 function has_ad_slots(): bool
 {
     foreach (['left', 'right', 'bottom'] as $n) {
-        if (ad_html($n) !== '') {
+        if (ad_is_promo(ad_html($n))) {
             return true;
         }
     }
@@ -241,6 +247,10 @@ function ad_slot(string $name, string $class): string
     $html = ad_html($name);
     if ($html === '') {
         return '';
+    }
+    if (!ad_is_promo($html)) {
+        // 広告ではないお知らせ（運営者へのお礼のお願いなど）：「PR」表示なし
+        return '<aside class="ad ' . h($class) . ' ad-' . h($name) . ' ad-notice" aria-label="お知らせ"><div class="ad-body">' . $html . '</div></aside>';
     }
     return '<aside class="ad ' . h($class) . ' ad-' . h($name) . '" aria-label="広告"><span class="ad-label">PR</span><div class="ad-body">' . $html . '</div></aside>';
 }
@@ -318,6 +328,17 @@ function ads_contain(string $needle): bool
 {
     foreach (['left', 'right', 'bottom'] as $n) {
         if (stripos(ad_html($n), $needle) !== false) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/** 広告枠にAmazonアソシエイトのリンク（tag=付き）があるか */
+function ads_have_amazon_tag(): bool
+{
+    foreach (['left', 'right', 'bottom'] as $n) {
+        if (preg_match('#amazon\.[^"\'\s]*[?&](amp;)?tag=#i', ad_html($n))) {
             return true;
         }
     }
