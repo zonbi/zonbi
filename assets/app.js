@@ -70,7 +70,18 @@
     var snsInput = form.querySelector('[data-remember-sns]');
     if (snsInput) {
       if (!snsInput.value) snsInput.value = store.get('zonbi_sns', '');
-      form.addEventListener('submit', function () { store.set('zonbi_sns', snsInput.value.trim().replace(/^[@＠]+/, '')); });
+      var savedType = store.get('zonbi_sns_type', '');
+      if (savedType && !form.querySelector('[data-remember-sns-type]:checked')) {
+        var r = form.querySelector('[data-remember-sns-type][value="' + savedType + '"]');
+        if (r) r.checked = true;
+      }
+      form.addEventListener('submit', function () {
+        var v = snsInput.value.trim();
+        var m = v.match(/(?:x\.com|twitter\.com|instagram\.com|threads\.(?:net|com))\/@?([A-Za-z0-9_.]+)/i);
+        store.set('zonbi_sns', (m ? m[1] : v).replace(/^[@＠]+/, ''));
+        var t = form.querySelector('[data-remember-sns-type]:checked');
+        if (t) store.set('zonbi_sns_type', t.value);
+      });
     }
 
     // 名前を記憶（次回入力を楽に）

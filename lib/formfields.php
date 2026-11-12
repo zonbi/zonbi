@@ -20,7 +20,7 @@ const FORM_FIELD_DEFS = [
     'color'    => ['label' => '色',                  'default' => FIELD_OPTIONAL, 'help' => '例: 青 / ○○担当カラー'],
     'size'     => ['label' => 'サイズ',              'default' => FIELD_OFF,      'help' => '例: M / L / フリー'],
     'shape'    => ['label' => '形（型・種類）',      'default' => FIELD_OPTIONAL, 'help' => '例: Aタイプ / 丸型'],
-    'sns'      => ['label' => 'SNSアカウント名（@）', 'default' => FIELD_OFF,     'help' => 'X・Instagram・Threads などのアカウント名（依頼者ごとに1つ）'],
+    'sns'      => ['label' => 'SNSアカウント名（@）', 'default' => FIELD_OFF,     'help' => 'X・Instagram・Threads から選んでアカウント名を入力（依頼者ごとに1つ）'],
 ];
 
 /** 新しい列（size・requester_sns・form_fields）がDBにあるか（007 のSQL適用済みか） */
@@ -115,38 +115,75 @@ function show_money(array $ff): bool
     return field_on($ff, 'price');
 }
 
-/** SNSアカウント名の正規化（先頭の@や空白を除去）。不正なら null */
-function normalize_sns(string $s): ?string
+/**
+ * SNSの種類。保存形式は「種類:アカウント名」（例: x:oshi_love）。種類なしの旧データはアカウント名のみ。
+ *  pattern: アカウント名に使える文字（各サービスの仕様）
+ */
+const SNS_TYPES = [
+    'x'  => ['label' => 'X',         'pattern' => '/^[A-Za-z0-9_]{1,15}$/',  'rule' => '英数字と_（15文字まで）',     'url' => 'https://x.com/%s'],
+    'ig' => ['label' => 'Instagram', 'pattern' => '/^[A-Za-z0-9_.]{1,30}$/', 'rule' => '英数字と_ .（30文字まで）', 'url' => 'https://www.instagram.com/%s/'],
+    'th' => ['label' => 'Threads',   'pattern' => '/^[A-Za-z0-9_.]{1,30}$/', 'rule' => '英数字と_ .（30文字まで）', 'url' => 'https://www.threads.com/@%s'],
+];
+
+/** 保存値を [種類, アカウント名] に分解 */
+function parse_sns(string $stored): array
 {
-    $s = trim(mb_convert_kana($s, 'as'));
-    $s = ltrim($s, '@＠ ');
-    if ($s === '') {
+    if (preg_match('/^(x|ig|th):(.+)$/', $stored, $m)) {
+        return [$m[1], $m[2]];
+    }
+    return ['', $stored];
+}
+
+/** 表示用（種類のラベル＋@アカウント名。プロフィールへのリンク付き） */
+function sns_html(string $stored): string
+{
+    [$type, $handle] = parse_sns($stored);
+    if ($handle === '') {
         return '';
     }
-    return preg_match('/^[A-Za-z0-9_.]{1,30}$/', $s) ? $s : null;
+    $label = $type !== '' ? '<span class="sns-type sns-' . h($type) . '">' . h(SNS_TYPES[$type]['label']) . '</span>' : '';
+    $text = $label . '@' . h($handle);
+    if ($type !== '') {
+        return '<a class="sns" href="' . h(sprintf(SNS_TYPES[$type]['url'], rawurlencode($handle))) . '" target="_blank" rel="noopener noreferrer nofollow">' . $text . '</a>';
+    }
+    return '<span class="sns">' . $text . '</span>';
 }
 
-function sns_html(string $sns): string
+/** CSV用（種類, アカウント名） */
+function sns_plain(string $stored): array
 {
-    return $sns === '' ? '' : '<span class="sns">@' . h($sns) . '</span>';
+    [$type, $handle] = parse_sns($stored);
+    return [$type !== '' ? SNS_TYPES[$type]['label'] : '', $handle];
 }
 
-/** 依頼者のSNS欄の検証 */
+/** 依頼者のSNS欄の検証。保存用の文字列（種類:アカウント名）を返す */
 function validate_sns(array $ff, array $src, array &$errors): string
 {
     if (!field_on($ff, 'sns')) {
         return '';
     }
-    $raw = input_str($src, 'requester_sns', 60);
-    $sns = normalize_sns($raw);
-    if ($sns === null) {
-        $errors[] = 'SNSアカウント名は英数字・_（アンダーバー）・.（ドット）で入力してください（@は不要です）。';
+    $type = (string)($src['requester_sns_type'] ?? '');
+    $handle = trim(mb_convert_kana(input_str($src, 'requester_sns', 60), 'as'));
+    $handle = ltrim($handle, '@＠ ');
+    // URLを貼られた場合はアカウント名だけ取り出す
+    if (preg_match('#(?:x\.com|twitter\.com|instagram\.com|threads\.(?:net|com))/@?([A-Za-z0-9_.]+)#i', $handle, $m)) {
+        $handle = $m[1];
+    }
+    if ($handle === '') {
+        if (field_required($ff, 'sns')) {
+            $errors[] = 'SNSアカウント名を入力してください。';
+        }
         return '';
     }
-    if ($sns === '' && field_required($ff, 'sns')) {
-        $errors[] = 'SNSアカウント名を入力してください。';
+    if (!isset(SNS_TYPES[$type])) {
+        $errors[] = 'SNSの種類（X / Instagram / Threads）を選んでください。';
+        return '';
     }
-    return $sns;
+    if (!preg_match(SNS_TYPES[$type]['pattern'], $handle)) {
+        $errors[] = SNS_TYPES[$type]['label'] . 'のアカウント名は' . SNS_TYPES[$type]['rule'] . 'で入力してください（@は不要です）。';
+        return '';
+    }
+    return $type . ':' . $handle;
 }
 
 /** 入力項目設定フォーム（作成画面・管理ページ共通） */

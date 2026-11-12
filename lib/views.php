@@ -149,10 +149,19 @@ function render_requester_fields(array $ff, string $name, string $sns, bool $rem
     <label><?= h($numberPrefix) ?>お名前（誰が） <span class="req">必須</span>
       <input type="text" name="requester_name" value="<?= h($name) ?>" maxlength="50" required placeholder="例: さや"<?= $remember ? ' data-remember-name' : '' ?>>
     </label>
-    <?php if (field_on($ff, 'sns')): ?>
-    <label>SNSアカウント名<?= field_required($ff, 'sns') ? ' <span class="req">必須</span>' : '' ?>
-      <span class="input-prefix"><span>@</span><input type="text" name="requester_sns" value="<?= h($sns) ?>" maxlength="31" placeholder="oshi_love" autocomplete="off" autocapitalize="off" spellcheck="false"<?= field_required($ff, 'sns') ? ' required' : '' ?><?= $remember ? ' data-remember-sns' : '' ?>></span>
-    </label>
+    <?php if (field_on($ff, 'sns')):
+        // 入力エラーで戻ってきたとき（POST値）と、保存済みの値（種類:アカウント名）の両方に対応
+        $postedType = (string)($_POST['requester_sns_type'] ?? '');
+        [$type, $handle] = $postedType !== '' || isset($_POST['requester_sns']) ? [$postedType, $sns] : parse_sns($sns); ?>
+    <fieldset class="sns-field" data-sns-field>
+      <legend>SNSアカウント名<?= field_required($ff, 'sns') ? ' <span class="req">必須</span>' : '' ?></legend>
+      <div class="seg sns-seg" role="radiogroup" aria-label="SNSの種類">
+        <?php foreach (SNS_TYPES as $k => $t): ?>
+          <label><input type="radio" name="requester_sns_type" value="<?= h($k) ?>"<?= $type === $k ? ' checked' : '' ?><?= $remember ? ' data-remember-sns-type' : '' ?>><span><?= h($t['label']) ?></span></label>
+        <?php endforeach; ?>
+      </div>
+      <span class="input-prefix"><span>@</span><input type="text" name="requester_sns" value="<?= h($handle) ?>" maxlength="60" placeholder="アカウント名（例: oshi_love）" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="アカウント名"<?= field_required($ff, 'sns') ? ' required' : '' ?><?= $remember ? ' data-remember-sns' : '' ?>></span>
+    </fieldset>
     <?php endif;
 }
 

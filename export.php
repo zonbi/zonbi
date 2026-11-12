@@ -13,13 +13,13 @@ $entries = fetch_entries((int)$session['id']);
 $rows = [];
 switch ($type) {
     case 'person':
-        $rows[] = ['依頼者', 'SNSアカウント（@なし）', '点数', '合計金額', '単価未定の件数', '内訳'];
+        $rows[] = ['依頼者', 'SNS', 'SNSアカウント（@なし）', '点数', '合計金額', '単価未定の件数', '内訳'];
         foreach (group_by_person($entries) as $p) {
             $detail = array_map(
                 fn($e) => $e['item_name'] . (item_label($e) !== '—' ? '（' . item_label($e) . '）' : '') . '×' . $e['quantity'] . (has_price($e) ? '' : '（単価未定）'),
                 $p['entries']
             );
-            $rows[] = [$p['name'], $p['sns'], $p['quantity'], $p['total'], $p['unpriced'], implode(' / ', $detail)];
+            $rows[] = [$p['name'], ...sns_plain($p['sns']), $p['quantity'], $p['total'], $p['unpriced'], implode(' / ', $detail)];
         }
         break;
     case 'item':
@@ -33,10 +33,10 @@ switch ($type) {
         }
         break;
     default:
-        $rows[] = ['No', '依頼者', 'SNSアカウント（@なし）', '商品名', '色', 'サイズ', '形', '個数', '単価', '小計', 'コメント', '購入済', '登録日時'];
+        $rows[] = ['No', '依頼者', 'SNS', 'SNSアカウント（@なし）', '商品名', '色', 'サイズ', '形', '個数', '単価', '小計', 'コメント', '購入済', '登録日時'];
         foreach ($entries as $i => $e) {
             $rows[] = [
-                $i + 1, $e['requester_name'], $e['requester_sns'] ?? '', $e['item_name'], $e['color'], $e['size'] ?? '', $e['variant'],
+                $i + 1, $e['requester_name'], ...sns_plain($e['requester_sns'] ?? ''), $e['item_name'], $e['color'], $e['size'] ?? '', $e['variant'],
                 $e['quantity'], has_price($e) ? $e['unit_price'] : '未定', line_total($e) ?? '',
                 $e['note'], (int)$e['is_purchased'] === 1 ? '済' : '', $e['created_at'],
             ];
