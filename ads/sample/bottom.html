@@ -3,6 +3,20 @@
   このファイルを ads/bottom.html にコピーし、ASPで発行されたバナー・リンクのHTMLコードを貼り付けてください。
   ※コメントだけのファイル、またはファイルがない場合は枠ごと表示されません。
 
-例:
+例1（バナー画像）:
 <a href="https://..." target="_blank" rel="sponsored nofollow noopener"><img src="https://..." width="728" height="90" alt=""></a>
+
+例2（テキストのカード。デザインは assets/style.css の .pr-card）:
+<div class="pr-cards">
+  <a class="pr-card" href="https://www.amazon.co.jp/dp/商品ID?tag=あなたのID-22" target="_blank" rel="sponsored nofollow noopener">
+    <span class="pr-card-icon" aria-hidden="true">🎁</span>
+    <span class="pr-card-body">
+      <span class="pr-card-title">商品名</span>
+      <span class="pr-card-desc">ひとこと説明</span>
+    </span>
+    <span class="pr-card-btn">Amazonで見る</span>
+  </a>
+</div>
+
+※Amazonのリンクを貼ると、フッターに「Amazonのアソシエイトとして…」の表記が自動で表示されます。
 -->

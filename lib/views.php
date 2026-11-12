@@ -84,7 +84,7 @@ function render_footer(): void
     <a href="<?= h(url('about.php')) ?>">運営者情報</a>
   </nav>
   <?php if (affiliate_enabled() || has_ad_slots()): ?>
-  <p class="aff-disclosure">当サイトはアフィリエイトプログラム等の広告を掲載しており、広告（PR）経由の購入により運営者が収益を得ることがあります。<?php if (amazon_enabled()): ?><br>Amazonのアソシエイトとして、<?= h(operator('name') !== '' ? operator('name') : '当サイト運営者') ?>は適格販売により収入を得ています。<?php endif; ?></p>
+  <p class="aff-disclosure">当サイトはアフィリエイトプログラム等の広告を掲載しており、広告（PR）経由の購入により運営者が収益を得ることがあります。<?php if (amazon_enabled() || ads_contain('amazon.')): ?><br>Amazonのアソシエイトとして、<?= h(operator('name') !== '' ? operator('name') : '当サイト運営者') ?>は適格販売により収入を得ています。<?php endif; ?></p>
   <?php endif; ?>
   <p>© <?= date('Y') ?> <?= h(operator('name') !== '' ? operator('name') : config('app_name', '代行さん')) ?></p>
 </footer>
@@ -311,4 +311,15 @@ function analytics_allowed(): bool
         }
     }
     return true;
+}
+
+/** 広告枠（ads/*.html）のどれかに指定の文字列が含まれるか（Amazonの広告表記の判定用） */
+function ads_contain(string $needle): bool
+{
+    foreach (['left', 'right', 'bottom'] as $n) {
+        if (stripos(ad_html($n), $needle) !== false) {
+            return true;
+        }
+    }
+    return false;
 }
