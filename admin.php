@@ -362,7 +362,8 @@ render_header('管理: ' . $session['title'], 'admin');
       <textarea name="description" rows="4" maxlength="2000"><?= h($session['description'] ?? '') ?></textarea>
     </label>
     <label>イベントURL（任意）
-      <input type="url" name="event_url" value="<?= h($session['event_url'] ?? '') ?>" maxlength="500" inputmode="url" placeholder="例: https://example.com/event/popup">
+      <span class="field-help" id="event-url-help">場所やイベント限定グッズを購入しにいく場合は、場所やイベントのURLが分かりましたら入力してください。</span>
+      <input type="url" name="event_url" value="<?= h($session['event_url'] ?? '') ?>" aria-describedby="event-url-help" maxlength="500" inputmode="url" placeholder="例: https://example.com/event/popup">
     </label>
     <label>受付締切（任意）
       <input type="datetime-local" name="deadline" value="<?= $session['deadline'] ? h(date('Y-m-d\TH:i', strtotime($session['deadline']))) : '' ?>">

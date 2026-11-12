@@ -496,3 +496,4 @@ a.sns:hover { text-decoration: underline; }
 .pr-card-desc { display: block; font-size: .78rem; color: var(--muted); margin-top: 2px; }
 .pr-card-btn { flex: none; font-size: .78rem; font-weight: 700; padding: 6px 12px; border-radius: 999px; background: #ff9900; color: #111; white-space: nowrap; }
 @media (max-width: 480px) { .pr-card { flex-wrap: wrap; } .pr-card-body { flex: 1 1 160px; } .pr-card-btn { margin-left: 66px; } }
+.field-help { display: block; font-size: .78rem; font-weight: 400; color: var(--muted); margin-top: 2px; line-height: 1.5; }

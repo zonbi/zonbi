@@ -98,7 +98,8 @@ render_header(config('app_name', '代行さん'));
       <textarea name="description" rows="4" maxlength="2000" placeholder="例: 1人3点まで。手数料は1点100円。支払いは受け取り時に。"><?= h($form['description']) ?></textarea>
     </label>
     <label>イベントURL（任意）
-      <input type="url" name="event_url" value="<?= h($form['event_url']) ?>" maxlength="500" inputmode="url" placeholder="例: https://example.com/event/popup">
+      <span class="field-help" id="event-url-help">場所やイベント限定グッズを購入しにいく場合は、場所やイベントのURLが分かりましたら入力してください。</span>
+      <input type="url" name="event_url" value="<?= h($form['event_url']) ?>" aria-describedby="event-url-help" maxlength="500" inputmode="url" placeholder="例: https://example.com/event/popup">
     </label>
     <label>受付締切（任意）
       <input type="datetime-local" name="deadline" value="<?= h($form['deadline']) ?>">
