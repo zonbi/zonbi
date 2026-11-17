@@ -28,6 +28,7 @@ require __DIR__ . '/moderation.php';
 require __DIR__ . '/related.php';
 require __DIR__ . '/grouping.php';
 require __DIR__ . '/formfields.php';
+require __DIR__ . '/products.php';
 
 // ---------------------------------------------------------------- 基本
 
@@ -294,6 +295,10 @@ function insert_entry(int $sid, string $name, string $sns, array $v, string $own
         array_push($cols, 'size', 'requester_sns');
         array_push($vals, $v['size'], $sns);
     }
+    if (!empty($v['product_id']) && products_ready()) {
+        $cols[] = 'product_id';
+        $vals[] = (int)$v['product_id'];
+    }
     db()->prepare('INSERT INTO shop_entries (' . implode(',', $cols) . ') VALUES (' . implode(',', array_fill(0, count($cols), '?')) . ')')->execute($vals);
     return (int)db()->lastInsertId();
 }
@@ -317,7 +322,8 @@ function update_entry(int $entryId, string $name, ?string $sns, array $v): void
 
 function row_is_blank(array $row): bool
 {
-    foreach (['item_name', 'color', 'size', 'variant', 'quantity', 'unit_price', 'note'] as $k) {
+    // 個数は初期値「1」が入っているため、空行の判定には使わない
+    foreach (['item_name', 'color', 'size', 'variant', 'unit_price', 'note'] as $k) {
         if (is_string($row[$k] ?? null) && trim($row[$k]) !== '') {
             return false;
         }

@@ -1,0 +1,8 @@
+# アップロードされた画像の置き場所。プログラムは実行させない・一覧表示しない
+Options -Indexes
+<FilesMatch "\.(?i:php\d*|phtml|phar|cgi|pl|py|sh|html?|svg|js)$">
+  Require all denied
+</FilesMatch>
+<IfModule mod_headers.c>
+  Header set X-Content-Type-Options "nosniff"
+</IfModule>

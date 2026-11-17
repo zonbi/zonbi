@@ -15,6 +15,7 @@ $self = url('items.php', $base + ['sort' => $sort]);
 $manualReady = group_label_ready();
 $ff = form_fields($session);
 $showPrice = field_on($ff, 'price');
+$productsById = products_by_id(fetch_products($sid));
 
 /** POSTされた依頼IDのうち、このセッションのものだけ返す */
 function posted_entry_ids(int $sid): array
@@ -122,6 +123,8 @@ render_header('似た商品まとめ: ' . $session['title'], 'items-page');
   <?php foreach ($groups as $gi => $g): $anchor = 'g' . $gi; $done = $g['purchased'] >= $g['quantity']; ?>
   <section class="card group-card<?= $done ? ' is-done' : '' ?>" id="<?= $anchor ?>">
     <div class="group-head">
+      <?php $gimg = ''; foreach ($g['entries'] as $ge) { if ($gimg === '') { $gimg = entry_thumb($ge, $productsById); } } ?>
+      <?php if ($gimg !== ''): ?><div class="group-img"><?= $gimg ?></div><?php endif; ?>
       <div class="group-title">
         <h2><?= h($g['label']) ?><?php if ($g['manual']): ?> <span class="badge badge-manual">手動</span><?php endif; ?></h2>
         <?php if (count($g['spellings']) > 1 || $g['manual']): ?>

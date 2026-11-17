@@ -93,6 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('success', 'セッションの受付を停止しました。');
             break;
         case 'delete_session':
+            delete_session_product_images($sid);
             $pdo->prepare('DELETE FROM shop_sessions WHERE id = ?')->execute([$sid]);
             flash('success', 'セッションを削除しました（依頼・通報も削除されました）。');
             $back = url('console.php', ['view' => 'sessions']);

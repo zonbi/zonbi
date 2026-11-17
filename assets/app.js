@@ -37,6 +37,16 @@
         total += sub;
         if (out) out.textContent = yen(sub);
       });
+      // 登録商品（カタログ）の個数
+      form.querySelectorAll('[data-product-qty]').forEach(function (inp) {
+        var q = toNum(inp.value);
+        var card = inp.closest('[data-product]');
+        if (card) card.classList.toggle('is-picked', q > 0);
+        if (q <= 0) return;
+        var price = inp.getAttribute('data-unit-price');
+        if (price === '' || price === null) { unpriced++; return; }
+        total += q * toNum(price);
+      });
       if (formTotal) formTotal.textContent = yen(total) + (unpriced ? '＋単価未定' + unpriced + '件' : '');
       form.querySelectorAll('[data-remove-row]').forEach(function (b) {
         b.hidden = rowsBox && rowsBox.querySelectorAll('[data-entry-row]').length <= 1;
@@ -44,6 +54,16 @@
     }
 
     form.addEventListener('input', recalc);
+    // 個数の −／＋ ボタン
+    form.addEventListener('click', function (ev) {
+      var b = ev.target.closest('[data-qty-step]');
+      if (!b) return;
+      var inp = b.parentNode.querySelector('[data-product-qty]');
+      var max = parseInt(inp.getAttribute('max') || '9999', 10);
+      var v = Math.min(max, Math.max(0, toNum(inp.value) + parseInt(b.getAttribute('data-qty-step'), 10)));
+      inp.value = v;
+      recalc();
+    });
     form.addEventListener('click', function (ev) {
       var rm = ev.target.closest('[data-remove-row]');
       if (rm) {
@@ -134,6 +154,18 @@
     });
     update();
   }
+
+  // ---- 商品登録：選んだ画像のプレビュー
+  document.querySelectorAll('[data-image-input]').forEach(function (inp) {
+    var prev = inp.closest('form').querySelector('[data-image-preview]');
+    inp.addEventListener('change', function () {
+      var f = inp.files && inp.files[0];
+      if (!f || !prev) return;
+      if (f.size > 8 * 1024 * 1024) { alert('画像は8MBまでです。'); inp.value = ''; prev.hidden = true; return; }
+      prev.src = URL.createObjectURL(f);
+      prev.hidden = false;
+    });
+  });
 
   // ---- 確認ダイアログ
   document.querySelectorAll('form[data-confirm]').forEach(function (f) {

@@ -29,12 +29,22 @@ $ff = form_fields($session);
 $detailHead = detail_header($ff);
 $showPrice = field_on($ff, 'price');
 $GLOBALS['admin_cols'] = ['detail' => $detailHead !== '', 'price' => $showPrice];
+$GLOBALS['products_by_id'] = products_by_id(fetch_products($sid));
 
 $errors = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_check();
     $action = (string)($_POST['action'] ?? '');
+
+    $productForm = [];
+    if (handle_product_action($action, $sid, $productForm)) {
+        if ($productForm) {
+            $_SESSION['product_form'] = $productForm;
+            redirect($self . (!empty($productForm['product_id']) ? '&product=' . (int)$productForm['product_id'] : '') . '#products');
+        }
+        redirect($self . '#products');
+    }
 
     switch ($action) {
         case 'update_session':
@@ -149,6 +159,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 flash('error', 'タイトルが一致しないため削除を中止しました。');
                 redirect($self . '#danger');
             }
+            delete_session_product_images($sid);
             db()->prepare('DELETE FROM shop_sessions WHERE id=?')->execute([$sid]);
             flash('success', 'セッション「' . $session['title'] . '」を削除しました。');
             redirect(url('index.php', ['deleted' => $publicId]));
@@ -263,6 +274,8 @@ render_header('管理: ' . $session['title'], 'admin');
   </form>
 </section>
 <?php endif; ?>
+
+<?php $pf = $_SESSION['product_form'] ?? []; unset($_SESSION['product_form']); render_product_manager($session, $self, $pf); ?>
 
 <p class="items-link"><a class="btn btn-primary" href="<?= h(url('items.php', $base)) ?>" target="_blank" rel="noopener">🧮 似た商品をまとめて合計個数を見る（別ウィンドウ）</a></p>
 
@@ -410,7 +423,7 @@ function admin_entry_row(array $e, string $self, array $base, bool $showName): v
   </td>
   <?php $cols = $GLOBALS['admin_cols']; ?>
   <?php if ($showName): ?><td><?= h($e['requester_name']) ?><?php if (($e['requester_sns'] ?? '') !== ''): ?><div class="note"><?= sns_html($e['requester_sns']) ?></div><?php endif; ?></td><?php endif; ?>
-  <td><?= h($e['item_name']) ?><?php if ($e['note'] !== ''): ?><div class="note"><?= h($e['note']) ?></div><?php endif; ?></td>
+  <td><?= entry_thumb($e, $GLOBALS['products_by_id']) ?><?= h($e['item_name']) ?><?php if ($e['note'] !== ''): ?><div class="note"><?= h($e['note']) ?></div><?php endif; ?></td>
   <?php if ($cols['detail']): ?><td><?= h(item_label($e)) ?></td><?php endif; ?>
   <td class="num"><?= (int)$e['quantity'] ?></td>
   <?php if ($cols['price']): ?><td class="num"><?= price_html($e['unit_price']) ?></td>
