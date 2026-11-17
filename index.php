@@ -95,7 +95,7 @@ render_header(config('app_name', '代行さん'));
       <input type="text" name="title" value="<?= h($form['title']) ?>" maxlength="100" required placeholder="例: 11/23 ○○ポップアップ 代行">
     </label>
     <label>説明・注意事項
-      <textarea name="description" rows="4" maxlength="2000" placeholder="例: 1人3点まで。手数料は1点100円。支払いは受け取り時に。"><?= h($form['description']) ?></textarea>
+      <textarea name="description" rows="4" maxlength="2000" placeholder="例: 1人3点まで。売り切れの場合はご了承ください。受け取り方法は個別に連絡します。"><?= h($form['description']) ?></textarea>
     </label>
     <label>イベントURL（任意）
       <span class="field-help" id="event-url-help">場所やイベント限定グッズを購入しにいく場合は、場所やイベントのURLが分かりましたら入力してください。</span>
