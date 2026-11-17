@@ -2,9 +2,11 @@
 declare(strict_types=1);
 
 /*
- * 代行する商品の登録（商品カタログ）
- *  - 代行者が管理ページで商品を画像付きで登録し、依頼者は一覧から選んで個数を入力する
+ * グッズ確認欄（イベントURL＋参考画像）
+ *  - 代行者が管理ページで、グッズを確認してもらうための参考画像を登録する（価格・在庫は載せない）
+ *  - 依頼の内容・個数・価格は、依頼者がグッズ確認欄を見て自分で入力する
  *  - 画像はサーバーで読み込み直して縮小・再保存する（位置情報などの埋め込み情報を除去、画像以外のファイルを排除）
+ *  ※テーブル名は shop_products のまま（price 等の列は使用しない）
  */
 
 const PRODUCT_IMAGE_MAX_BYTES = 8 * 1024 * 1024;  // アップロード上限 8MB
@@ -48,12 +50,6 @@ function find_product(int $sessionId, int $productId): ?array
     $st = db()->prepare('SELECT * FROM shop_products WHERE id = ? AND session_id = ?');
     $st->execute([$productId, $sessionId]);
     return $st->fetch() ?: null;
-}
-
-/** 依頼者が登録商品以外も依頼できるか（商品が未登録なら常に可） */
-function allows_free_items(array $session, array $products): bool
-{
-    return !$products || !array_key_exists('allow_free_items', $session) || (int)$session['allow_free_items'] === 1;
 }
 
 /** 「青, 赤、黄」→ ['青','赤','黄'] */
@@ -186,7 +182,7 @@ function validate_product(array $src, array &$errors): array
         'max_per_person' => null,
     ];
     if ($p['name'] === '') {
-        $errors[] = '商品名を入力してください。';
+        $errors[] = 'タイトル（グッズ名）を入力してください。';
     }
     $raw = trim((string)($src['p_price'] ?? ''));
     if ($raw !== '') {
@@ -242,11 +238,24 @@ function products_by_id(array $products): array
 /** 管理ページの商品操作を処理する。処理したら true（呼び出し側でリダイレクト） */
 function handle_product_action(string $action, int $sid, array &$flashForm): bool
 {
-    if (!in_array($action, ['product_save', 'product_toggle', 'product_delete', 'product_move', 'product_settings'], true)) {
+    if (!in_array($action, ['product_save', 'product_toggle', 'product_delete', 'product_move', 'goods_event_url'], true)) {
         return false;
     }
+    if ($action === 'goods_event_url') {
+        // グッズ確認欄のイベントURL（参考画像の機能が未導入でも保存できる）
+        $u = input_str($_POST, 'event_url', 500);
+        if ($err = event_url_error($u)) {
+            flash('error', $err);
+        } elseif ($err = save_event_url($sid, $u)) {
+            flash('error', $err);
+        } else {
+            moderate_session($sid, false);
+            flash('success', $u === '' ? 'イベントURLを削除しました。' : 'イベントURLを保存しました。');
+        }
+        return true;
+    }
     if (!products_ready()) {
-        flash('error', '商品の登録にはデータベースの更新が必要です。phpMyAdmin で sql/migrations/008_add_products.sql を実行してください。');
+        flash('error', '参考画像の登録にはデータベースの更新が必要です。phpMyAdmin で sql/migrations/008_add_products.sql を実行してください。');
         return true;
     }
     $pdo = db();
@@ -287,20 +296,20 @@ function handle_product_action(string $action, int $sid, array &$flashForm): boo
             if ($product) {
                 $pdo->prepare('UPDATE shop_products SET name=?, description=?, price=?, color_options=?, size_options=?, shape_options=?, max_per_person=?, image=? WHERE id=?')
                     ->execute(array_merge($vals, [$product['id']]));
-                flash('success', '「' . $p['name'] . '」を更新しました。');
+                flash('success', '参考画像「' . $p['name'] . '」を更新しました。');
             } else {
                 $st = $pdo->prepare('SELECT COALESCE(MAX(sort_order), 0) + 1 FROM shop_products WHERE session_id = ?');
                 $st->execute([$sid]);
                 $pdo->prepare('INSERT INTO shop_products (session_id, name, description, price, color_options, size_options, shape_options, max_per_person, image, sort_order) VALUES (?,?,?,?,?,?,?,?,?,?)')
                     ->execute(array_merge([$sid], $vals, [(int)$st->fetchColumn()]));
-                flash('success', '「' . $p['name'] . '」を登録しました。');
+                flash('success', '参考画像「' . $p['name'] . '」を追加しました。');
             }
             return true;
 
         case 'product_toggle':
             if ($product) {
                 $pdo->prepare('UPDATE shop_products SET is_active = 1 - is_active WHERE id = ?')->execute([$product['id']]);
-                flash('success', '「' . $product['name'] . '」を' . ((int)$product['is_active'] === 1 ? '受付停止にしました（依頼者の一覧に表示されません）。' : '受付中にしました。'));
+                flash('success', '「' . $product['name'] . '」を' . ((int)$product['is_active'] === 1 ? '非表示にしました。' : '表示するようにしました。'));
             }
             return true;
 
@@ -309,7 +318,7 @@ function handle_product_action(string $action, int $sid, array &$flashForm): boo
                 delete_product_image($product['image']);
                 $pdo->prepare('UPDATE shop_entries SET product_id = NULL WHERE product_id = ?')->execute([$product['id']]);
                 $pdo->prepare('DELETE FROM shop_products WHERE id = ?')->execute([$product['id']]);
-                flash('success', '「' . $product['name'] . '」を削除しました（すでに届いている依頼はそのまま残ります）。');
+                flash('success', '参考画像「' . $product['name'] . '」を削除しました。');
             }
             return true;
 
@@ -329,10 +338,6 @@ function handle_product_action(string $action, int $sid, array &$flashForm): boo
             }
             return true;
 
-        case 'product_settings':
-            $pdo->prepare('UPDATE shop_sessions SET allow_free_items = ? WHERE id = ?')->execute([empty($_POST['allow_free_items']) ? 0 : 1, $sid]);
-            flash('success', empty($_POST['allow_free_items']) ? '登録した商品だけを受け付けるようにしました。' : '登録した商品以外の依頼も受け付けるようにしました。');
-            return true;
     }
     return false;
 }
@@ -342,37 +347,37 @@ function handle_product_action(string $action, int $sid, array &$flashForm): boo
 function render_product_manager(array $session, string $self, array $form = []): void
 {
     $sid = (int)$session['id'];
-    if (!products_ready()) {
-        ?>
-<details class="card" id="products">
-  <summary><strong>代行する商品を登録（画像付き）</strong></summary>
-  <p class="small">商品の登録には、phpMyAdmin で <code>sql/migrations/008_add_products.sql</code> の実行が必要です。</p>
-</details>
-<?php
-        return;
-    }
-    $products = fetch_products($sid);
+    $ready = products_ready();
+    $products = $ready ? fetch_products($sid) : [];
     $editId = (int)($_GET['product'] ?? ($form['product_id'] ?? 0));
     $editing = $editId ? find_product($sid, $editId) : null;
-    $v = $form ?: ($editing ? [
-        'p_name' => $editing['name'], 'p_description' => $editing['description'], 'p_price' => $editing['price'] ?? '',
-        'p_color_options' => $editing['color_options'], 'p_size_options' => $editing['size_options'],
-        'p_shape_options' => $editing['shape_options'], 'p_max' => $editing['max_per_person'] ?? '',
-    ] : []);
-    $open = $products || $editing || $form || isset($_GET['product']);
+    $v = $form ?: ($editing ? ['p_name' => $editing['name'], 'p_description' => $editing['description']] : []);
+    $open = $products || $editing || $form || isset($_GET['product']) || !empty($session['event_url']);
     ?>
 <details class="card product-manager" id="products"<?= $open ? ' open' : '' ?>>
-  <summary><strong>代行する商品を登録（画像付き）</strong><?php if ($products): ?> <span class="badge badge-open"><?= count($products) ?>件</span><?php endif; ?></summary>
-  <p class="small muted">登録した商品は依頼者のページに画像付きで並び、依頼者は選んで個数を入れるだけで依頼できます。</p>
+  <summary><strong>グッズ確認欄</strong><?php if ($products): ?> <span class="badge badge-open">参考画像 <?= count($products) ?>件</span><?php endif; ?></summary>
+  <p class="small muted">依頼者がグッズを確認するための情報を載せる欄です（依頼者のページの上部に表示されます）。依頼の内容・個数・価格は、依頼者がこの欄を見て自分で入力します。</p>
 
+  <form method="post" action="<?= h($self) ?>#products" class="goods-url-form">
+    <?= csrf_field() ?>
+    <input type="hidden" name="action" value="goods_event_url">
+    <label>イベントURL（任意）
+      <span class="field-help" id="event-url-help">場所やイベント限定グッズを購入しにいく場合は、場所やイベントのURLが分かりましたら入力してください。公式のグッズ紹介ページのURLもおすすめです。</span>
+      <span class="copy-row"><input type="url" name="event_url" value="<?= h($session['event_url'] ?? '') ?>" aria-describedby="event-url-help" maxlength="500" inputmode="url" placeholder="例: https://example.com/event/goods"><button class="btn btn-primary btn-sm">保存</button></span>
+    </label>
+  </form>
+
+  <?php if (!$ready): ?>
+    <p class="small">参考画像を追加するには、phpMyAdmin で <code>sql/migrations/008_add_products.sql</code> の実行が必要です。</p>
+</details>
+  <?php return; endif; ?>
+  <h3 class="goods-sub">参考画像</h3>
   <details class="legal-note">
-    <summary>⚠ 登録の前に確認してください（法律・規約まわり）</summary>
+    <summary>⚠ 参考画像を載せる前に確認してください</summary>
     <ul>
-      <li><strong>価格は販売元の定価（税込）</strong>で登録してください。手数料などを受け取る場合は、商品の価格に上乗せせず、<strong>別に明記</strong>してください。定価より高い価格での販売は転売とみなされ、イベントの規約違反や法令違反になるおそれがあります。</li>
-      <li><strong>チケット・入場券の類は登録できません</strong>（チケット不正転売禁止法、イベントの規約）。</li>
-      <li><strong>画像は、自分で撮影した写真など、掲載する権利のあるもの</strong>を使ってください。公式サイトや他人のSNSの画像を無断で使うと著作権侵害になるおそれがあります。キャラクターが写る写真の扱いは権利者の方針に従ってください。</li>
-      <li>イベントや販売元が<strong>代理購入・購入数を制限</strong>している場合は、それに従ってください（「1人あたりの上限」も設定できます）。</li>
-      <li>代行を<strong>事業として継続的に</strong>行う場合（手数料で利益を得る等）は、特定商取引法の表示や古物商許可などが必要になることがあります。詳しくは<a href="<?= h(url('terms.php')) ?>#products" target="_blank">利用規約</a>をご覧ください。</li>
+      <li>参考画像は<strong>グッズを確認してもらうためのもの</strong>です。価格や在庫は載せず、依頼者が自分で確認・入力する形にしています（「販売」と受け取られないようにするため）。</li>
+      <li><strong>自分で撮影した写真など、掲載する権利のある画像</strong>を使ってください。公式サイトや他人のSNSの画像を無断で載せると著作権侵害になるおそれがあります。公式の画像を見てほしい場合は、画像ではなく<strong>公式ページのURL</strong>を上の「イベントURL」に入れるのが安全です。</li>
+      <li>チケット・入場券の類は載せられません。イベントや販売元の規約（代理購入の禁止・購入数の制限など）に従ってください。詳しくは<a href="<?= h(url('terms.php')) ?>#products" target="_blank">利用規約</a>をご覧ください。</li>
     </ul>
   </details>
 
@@ -382,58 +387,32 @@ function render_product_manager(array $session, string $self, array $form = []):
     <li class="<?= (int)$p['is_active'] === 1 ? '' : 'is-off' ?>">
       <div class="pa-thumb"><?php if ($img !== ''): ?><img src="<?= h($img) ?>" alt=""><?php else: ?><span>No Image</span><?php endif; ?></div>
       <div class="pa-body">
-        <strong><?= h($p['name']) ?></strong><?php if ((int)$p['is_active'] !== 1): ?> <span class="badge badge-closed">受付停止</span><?php endif; ?>
-        <div class="small muted">
-          <?= $p['price'] !== null ? h(yen($p['price'])) : '価格未定' ?>
-          <?php foreach (['color_options' => '色', 'size_options' => 'サイズ', 'shape_options' => '形'] as $k => $lab): if ($p[$k] !== ''): ?>／<?= h($lab) ?>: <?= h($p[$k]) ?><?php endif; endforeach; ?>
-          <?php if ($p['max_per_person'] !== null): ?>／1人<?= (int)$p['max_per_person'] ?>個まで<?php endif; ?>
-        </div>
+        <strong><?= h($p['name']) ?></strong><?php if ((int)$p['is_active'] !== 1): ?> <span class="badge badge-closed">非表示</span><?php endif; ?>
+        <?php if ($p['description'] !== ''): ?><div class="small muted"><?= h($p['description']) ?></div><?php endif; ?>
       </div>
       <div class="pa-actions">
         <?= product_btn($self, 'product_move', $p['id'], '↑', 'btn-ghost', '', ['dir' => 'up'], $i === 0) ?>
         <?= product_btn($self, 'product_move', $p['id'], '↓', 'btn-ghost', '', ['dir' => 'down'], $i === count($products) - 1) ?>
         <a class="btn btn-ghost btn-sm" href="<?= h($self . (str_contains($self, '?') ? '&' : '?') . 'product=' . (int)$p['id']) ?>#product-form">編集</a>
-        <?= product_btn($self, 'product_toggle', $p['id'], (int)$p['is_active'] === 1 ? '停止' : '再開', 'btn-ghost') ?>
-        <?= product_btn($self, 'product_delete', $p['id'], '削除', 'btn-danger', '「' . $p['name'] . '」を削除しますか？（届いている依頼は残ります）') ?>
+        <?= product_btn($self, 'product_toggle', $p['id'], (int)$p['is_active'] === 1 ? '非表示' : '表示', 'btn-ghost') ?>
+        <?= product_btn($self, 'product_delete', $p['id'], '削除', 'btn-danger', '「' . $p['name'] . '」を削除しますか？') ?>
       </div>
     </li>
     <?php endforeach; ?>
   </ul>
-  <form method="post" action="<?= h($self) ?>#products" class="free-items-setting">
-    <?= csrf_field() ?>
-    <input type="hidden" name="action" value="product_settings">
-    <label class="checkbox"><input type="checkbox" name="allow_free_items" value="1"<?= allows_free_items($session, $products) ? ' checked' : '' ?> onchange="this.form.submit()"> 登録した商品以外の依頼（自由入力）も受け付ける</label>
-  </form>
   <?php endif; ?>
 
   <form method="post" action="<?= h($self) ?>#products" enctype="multipart/form-data" class="product-form" id="product-form">
     <?= csrf_field() ?>
     <input type="hidden" name="action" value="product_save">
     <?php if ($editing): ?><input type="hidden" name="product_id" value="<?= (int)$editing['id'] ?>"><?php endif; ?>
-    <h3><?= $editing ? '「' . h($editing['name']) . '」を編集' : '商品を追加' ?></h3>
-    <div class="grid">
-      <label class="span-2">商品名 <span class="req">必須</span>
-        <input type="text" name="p_name" value="<?= h($v['p_name'] ?? '') ?>" maxlength="200" required placeholder="例: 万博すごろく">
-      </label>
-      <label>定価（税込・円）
-        <input type="number" name="p_price" value="<?= h($v['p_price'] ?? '') ?>" min="0" max="10000000" inputmode="numeric" placeholder="未定なら空欄">
-      </label>
-      <label>1人あたりの上限
-        <input type="number" name="p_max" value="<?= h($v['p_max'] ?? '') ?>" min="1" max="999" inputmode="numeric" placeholder="なしなら空欄">
-      </label>
-      <label>色の選択肢
-        <input type="text" name="p_color_options" value="<?= h($v['p_color_options'] ?? '') ?>" maxlength="500" placeholder="例: 青, 赤, 黄">
-      </label>
-      <label>サイズの選択肢
-        <input type="text" name="p_size_options" value="<?= h($v['p_size_options'] ?? '') ?>" maxlength="500" placeholder="例: S, M, L">
-      </label>
-      <label>形の選択肢
-        <input type="text" name="p_shape_options" value="<?= h($v['p_shape_options'] ?? '') ?>" maxlength="500" placeholder="例: Aタイプ, Bタイプ">
-      </label>
-      <label class="span-2">説明
-        <input type="text" name="p_description" value="<?= h($v['p_description'] ?? '') ?>" maxlength="500" placeholder="例: 会場限定。ランダム封入（全8種）">
-      </label>
-    </div>
+    <h3><?= $editing ? '「' . h($editing['name']) . '」を編集' : '参考画像を追加' ?></h3>
+    <label>タイトル（グッズ名） <span class="req">必須</span>
+      <input type="text" name="p_name" value="<?= h($v['p_name'] ?? '') ?>" maxlength="200" required placeholder="例: 万博すごろく">
+    </label>
+    <label>メモ
+      <input type="text" name="p_description" value="<?= h($v['p_description'] ?? '') ?>" maxlength="500" placeholder="例: 会場限定。色は青・赤の2種類">
+    </label>
     <div class="image-field">
       <?php if ($editing && product_image_url($editing['image']) !== ''): ?>
         <img class="current-img" src="<?= h(product_image_url($editing['image'])) ?>" alt="現在の画像">
@@ -448,10 +427,42 @@ function render_product_manager(array $session, string $self, array $form = []):
     </div>
     <div class="actions">
       <?php if ($editing): ?><a class="btn btn-ghost" href="<?= h($self) ?>#products">キャンセル</a><?php endif; ?>
-      <button class="btn btn-primary"><?= $editing ? '更新する' : '登録する' ?></button>
+      <button class="btn btn-primary"><?= $editing ? '更新する' : '追加する' ?></button>
     </div>
   </form>
 </details>
+<?php
+}
+
+/** 依頼者ページのグッズ確認欄（イベントURL＋参考画像）。何もなければ表示しない */
+function render_goods_section(array $session, array $goods): void
+{
+    $url = (string)($session['event_url'] ?? '');
+    if ($url === '' && !$goods) {
+        return;
+    }
+    ?>
+<section class="card goods-section" id="goods">
+  <h2>グッズ確認</h2>
+  <?php if ($url !== ''): ?>
+    <p class="event-url">🔗 イベント・グッズ情報: <a href="<?= h($url) ?>" target="_blank" rel="noopener noreferrer nofollow"><?= h($url) ?></a></p>
+  <?php endif; ?>
+  <?php if ($goods): ?>
+    <div class="goods-grid">
+      <?php foreach ($goods as $g): $img = product_image_url($g['image']); ?>
+      <figure class="goods-item">
+        <?php if ($img !== ''): ?><a href="<?= h($img) ?>" target="_blank" rel="noopener" class="goods-img"><img src="<?= h($img) ?>" alt="<?= h($g['name']) ?>" loading="lazy"></a><?php else: ?><div class="goods-img goods-noimg">🛍️</div><?php endif; ?>
+        <figcaption>
+          <strong><?= h($g['name']) ?></strong>
+          <?php if ($g['description'] !== ''): ?><span><?= h($g['description']) ?></span><?php endif; ?>
+          <?php if (session_is_open($session)): ?><button type="button" class="btn btn-ghost btn-sm" data-use-name="<?= h($g['name']) ?>">この名前で入力</button><?php endif; ?>
+        </figcaption>
+      </figure>
+      <?php endforeach; ?>
+    </div>
+    <p class="muted small">※画像は確認用の参考です。在庫・価格・仕様は変わることがあります。欲しいグッズは下の依頼欄にご自身で入力してください。</p>
+  <?php endif; ?>
+</section>
 <?php
 }
 
@@ -463,100 +474,4 @@ function product_btn(string $self, string $action, $pid, string $label, string $
         $html .= '<input type="hidden" name="' . h($k) . '" value="' . h($val) . '">';
     }
     return $html . '<button class="btn ' . h($class) . ' btn-sm"' . ($disabled ? ' disabled' : '') . '>' . h($label) . '</button></form>';
-}
-
-// ---------------------------------------------------------------- 依頼者ページ
-
-/**
- * 依頼フォームで選ばれた登録商品を、保存用の依頼データに変換（検証込み）
- * POST: products[商品ID][qty|color|size|variant]
- */
-function collect_product_picks(array $products, array $post, int $sid, string $ownerHash, array &$errors): array
-{
-    $in = is_array($post['products'] ?? null) ? $post['products'] : [];
-    $out = [];
-    foreach ($products as $p) {
-        $row = is_array($in[$p['id']] ?? null) ? $in[$p['id']] : [];
-        $qty = to_int_or_null($row['qty'] ?? '');
-        if (!$qty) {
-            continue;
-        }
-        $name = $p['name'];
-        if ($qty > 9999) {
-            $errors[] = "「{$name}」の個数は 9999 までです。";
-            continue;
-        }
-        $chosen = [];
-        foreach (['color' => ['color_options', '色'], 'size' => ['size_options', 'サイズ'], 'variant' => ['shape_options', '形']] as $k => [$col, $lab]) {
-            $opts = parse_options((string)$p[$col]);
-            $val = input_str($row, $k, 100);
-            if ($opts && !in_array($val, $opts, true)) {
-                $errors[] = "「{$name}」の{$lab}を選んでください。";
-            }
-            $chosen[$k] = $opts ? $val : '';
-        }
-        if ($p['max_per_person'] !== null) {
-            // すでに依頼済みの分（このブラウザ／編集URLの依頼者）と合わせて上限を確認
-            $st = db()->prepare('SELECT COALESCE(SUM(quantity), 0) FROM shop_entries WHERE session_id = ? AND product_id = ? AND owner_key = ?');
-            $st->execute([$sid, $p['id'], $ownerHash]);
-            $already = (int)$st->fetchColumn();
-            $sameInForm = array_sum(array_map(fn($o) => $o['product_id'] === (int)$p['id'] ? $o['quantity'] : 0, $out));
-            if ($already + $sameInForm + $qty > (int)$p['max_per_person']) {
-                $errors[] = "「{$name}」は1人{$p['max_per_person']}個までです" . ($already ? "（依頼済み {$already}個）" : '') . '。';
-                continue;
-            }
-        }
-        $out[] = [
-            'product_id' => (int)$p['id'],
-            'item_name'  => $name,
-            'color'      => $chosen['color'],
-            'size'       => $chosen['size'],
-            'variant'    => $chosen['variant'],
-            'quantity'   => $qty,
-            'unit_price' => $p['price'] !== null ? (int)$p['price'] : db_price(null),
-            'note'       => input_str($row, 'note', 500),
-        ];
-    }
-    return $out;
-}
-
-/** 依頼フォーム内の商品一覧（カタログ） */
-function render_product_catalog(array $products, array $post, bool $showPrice): void
-{
-    if (!$products) {
-        return;
-    }
-    $in = is_array($post['products'] ?? null) ? $post['products'] : [];
-    ?>
-<div class="catalog" data-catalog>
-  <?php foreach ($products as $p):
-      $row = is_array($in[$p['id']] ?? null) ? $in[$p['id']] : [];
-      $img = product_image_url($p['image']);
-      $n = fn(string $k) => 'products[' . (int)$p['id'] . '][' . $k . ']'; ?>
-  <div class="catalog-item" data-product>
-    <div class="ci-img"><?php if ($img !== ''): ?><img src="<?= h($img) ?>" alt="<?= h($p['name']) ?>" loading="lazy"><?php else: ?><span>🛍️</span><?php endif; ?></div>
-    <div class="ci-body">
-      <div class="ci-name"><?= h($p['name']) ?></div>
-      <?php if ($showPrice): ?><div class="ci-price"><?= $p['price'] !== null ? h(yen($p['price'])) : '<span class="tbd">価格未定</span>' ?></div><?php endif; ?>
-      <?php if ($p['description'] !== ''): ?><div class="ci-desc"><?= h($p['description']) ?></div><?php endif; ?>
-      <?php foreach (['color' => ['color_options', '色'], 'size' => ['size_options', 'サイズ'], 'variant' => ['shape_options', '形']] as $k => [$col, $lab]):
-          $opts = parse_options((string)$p[$col]); if (!$opts) { continue; } ?>
-        <label class="ci-opt"><span><?= h($lab) ?></span>
-          <select name="<?= h($n($k)) ?>">
-            <option value="">選択</option>
-            <?php foreach ($opts as $o): ?><option value="<?= h($o) ?>"<?= ($row[$k] ?? '') === $o ? ' selected' : '' ?>><?= h($o) ?></option><?php endforeach; ?>
-          </select>
-        </label>
-      <?php endforeach; ?>
-      <div class="ci-qty">
-        <button type="button" class="qty-btn" data-qty-step="-1" aria-label="1つ減らす">−</button>
-        <input type="number" name="<?= h($n('qty')) ?>" value="<?= h((string)($row['qty'] ?? '0')) ?>" min="0" max="<?= $p['max_per_person'] !== null ? (int)$p['max_per_person'] : 9999 ?>" inputmode="numeric" aria-label="<?= h($p['name']) ?>の個数" data-product-qty data-unit-price="<?= $p['price'] !== null ? (int)$p['price'] : '' ?>">
-        <button type="button" class="qty-btn" data-qty-step="1" aria-label="1つ増やす">＋</button>
-      </div>
-      <?php if ($p['max_per_person'] !== null): ?><div class="ci-limit">1人<?= (int)$p['max_per_person'] ?>個まで</div><?php endif; ?>
-    </div>
-  </div>
-  <?php endforeach; ?>
-</div>
-<?php
 }

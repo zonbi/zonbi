@@ -14,9 +14,8 @@ $ff = form_fields($session);
 $detailHead = detail_header($ff);
 $showPrice = field_on($ff, 'price');
 $showSub = (bool)$ff['subtotal'];
-$products = fetch_products($sid, true);                    // 依頼者に見せる商品（受付中のみ）
-$productsById = products_by_id(fetch_products($sid));      // 画像表示用（停止中も含む）
-$allowFree = allows_free_items($session, $products);
+$goods = fetch_products($sid, true);                       // グッズ確認欄の参考画像（表示中のみ）
+$productsById = products_by_id(fetch_products($sid));      // 以前に商品から選んだ依頼の画像表示用
 
 // 「あなた専用の編集URL」から来た場合: キーをこのブラウザに保存し、URLからキーを消す
 if (isset($_GET['me']) && is_string($_GET['me'])) {
@@ -50,22 +49,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'add') {
         $postedName = input_str($_POST, 'requester_name', 50);
         $postedSns = input_str($_POST, 'requester_sns', 60);
-        $rows = $allowFree && is_array($_POST['rows'] ?? null) ? array_values($_POST['rows']) : [];
+        // 依頼は依頼者が自分で入力する（グッズ確認欄は参考情報のみ）
+        $rows = is_array($_POST['rows'] ?? null) ? array_values($_POST['rows']) : [];
         $rows = array_values(array_filter($rows, fn($r) => is_array($r) && !row_is_blank($r)));
         $postedRows = $rows ?: [[]];
-        $picks = collect_product_picks($products, $_POST, $sid, $owner, $errors);
 
         if ($postedName === '') {
             $errors[] = 'お名前を入力してください。';
         }
-        if (!$rows && !$picks && !$errors) {
-            $errors[] = $products ? '依頼する商品の個数を入力してください。' : '依頼する商品を1つ以上入力してください。';
+        if (!$rows) {
+            $errors[] = '依頼する商品を1つ以上入力してください。';
         }
         if (count($rows) > 50) {
             $errors[] = '一度に登録できるのは50件までです。';
         }
         $sns = validate_sns($ff, $_POST, $errors);
-        $valid = $picks;
+        $valid = [];
         foreach ($rows as $i => $r) {
             $label = count($rows) > 1 ? (($i + 1) . '行目: ') : '';
             $v = validate_entry($r, $errors, $label, $ff);
@@ -136,9 +135,6 @@ render_header($session['title']);
   <?php if ($session['description'] !== null && $session['description'] !== ''): ?>
     <div class="description"><?= nl2br(h($session['description'])) ?></div>
   <?php endif; ?>
-  <?php if (!empty($session['event_url'])): ?>
-    <p class="event-url">🔗 イベント情報: <a href="<?= h($session['event_url']) ?>" target="_blank" rel="noopener noreferrer nofollow"><?= h($session['event_url']) ?></a></p>
-  <?php endif; ?>
   <p class="meta">
     <?php if ($session['deadline']): ?>
       受付締切: <strong><?= h(date('Y/m/d H:i', strtotime($session['deadline']))) ?></strong>
@@ -146,6 +142,8 @@ render_header($session['title']);
     <?php if ($open): ?><span class="badge badge-open">受付中</span><?php else: ?><span class="badge badge-closed">受付終了</span><?php endif; ?>
   </p>
 </section>
+
+<?php render_goods_section($session, $goods); ?>
 
 <?php if ($editing): ?>
 <section class="card">
@@ -171,27 +169,16 @@ render_header($session['title']);
     <?= csrf_field() ?>
     <input type="hidden" name="action" value="add">
     <?php render_requester_fields($ff, $postedName, $postedSns, true, '1. '); ?>
-    <?php if ($products): ?>
-      <p class="muted small">2. 欲しい商品の個数を入れてください。</p>
-      <?php render_product_catalog($products, $_POST, $showPrice); ?>
-    <?php else: ?>
-      <p class="muted small">2. 欲しいグッズを入力してください。複数ある場合は「＋ 商品を追加」で行を増やせます。</p>
-    <?php endif; ?>
-    <?php if ($allowFree): ?>
-    <?php $freeOpen = !$products || (($_POST['action'] ?? '') === 'add' && array_filter((array)($_POST['rows'] ?? []), fn($r) => is_array($r) && !row_is_blank($r))); ?>
-    <details class="free-items"<?= $freeOpen ? ' open' : '' ?><?= $products ? '' : ' data-always-open' ?>>
-      <?php if ($products): ?><summary>リストにない商品を依頼する</summary><?php endif; ?>
-      <div data-rows>
-        <?php foreach ($postedRows as $i => $r) {
-            render_entry_fields("rows[$i]", $r, true, $ff);
-        } ?>
-      </div>
-      <template data-row-template>
-        <?php render_entry_fields('rows[__INDEX__]', [], true, $ff); ?>
-      </template>
-      <button type="button" class="btn btn-ghost btn-block" data-add-row>＋ 商品を追加</button>
-    </details>
-    <?php endif; ?>
+    <p class="muted small">2. 欲しいグッズを入力してください。<?= ($goods || !empty($session['event_url'])) ? '上の「グッズ確認」を参考にしてください。' : '' ?>複数ある場合は「＋ 商品を追加」で行を増やせます。</p>
+    <div data-rows>
+      <?php foreach ($postedRows as $i => $r) {
+          render_entry_fields("rows[$i]", $r, true, $ff);
+      } ?>
+    </div>
+    <template data-row-template>
+      <?php render_entry_fields('rows[__INDEX__]', [], true, $ff); ?>
+    </template>
+    <button type="button" class="btn btn-ghost btn-block" data-add-row>＋ 商品を追加</button>
     <?php if ($showSub): ?><div class="form-total">合計 <strong data-form-total>¥0</strong></div><?php endif; ?>
     <p class="consent-note">送信すると<a href="<?= h(url('terms.php')) ?>" target="_blank">利用規約・免責事項</a>に同意したものとみなします。代行の取引は代行者とあなたの間で行われ、本サービスの運営者は関与しません。</p>
     <button type="submit" class="btn btn-primary btn-block">この内容で依頼する</button>

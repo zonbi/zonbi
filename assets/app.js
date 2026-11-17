@@ -37,16 +37,6 @@
         total += sub;
         if (out) out.textContent = yen(sub);
       });
-      // 登録商品（カタログ）の個数
-      form.querySelectorAll('[data-product-qty]').forEach(function (inp) {
-        var q = toNum(inp.value);
-        var card = inp.closest('[data-product]');
-        if (card) card.classList.toggle('is-picked', q > 0);
-        if (q <= 0) return;
-        var price = inp.getAttribute('data-unit-price');
-        if (price === '' || price === null) { unpriced++; return; }
-        total += q * toNum(price);
-      });
       if (formTotal) formTotal.textContent = yen(total) + (unpriced ? '＋単価未定' + unpriced + '件' : '');
       form.querySelectorAll('[data-remove-row]').forEach(function (b) {
         b.hidden = rowsBox && rowsBox.querySelectorAll('[data-entry-row]').length <= 1;
@@ -54,16 +44,6 @@
     }
 
     form.addEventListener('input', recalc);
-    // 個数の −／＋ ボタン
-    form.addEventListener('click', function (ev) {
-      var b = ev.target.closest('[data-qty-step]');
-      if (!b) return;
-      var inp = b.parentNode.querySelector('[data-product-qty]');
-      var max = parseInt(inp.getAttribute('max') || '9999', 10);
-      var v = Math.min(max, Math.max(0, toNum(inp.value) + parseInt(b.getAttribute('data-qty-step'), 10)));
-      inp.value = v;
-      recalc();
-    });
     form.addEventListener('click', function (ev) {
       var rm = ev.target.closest('[data-remove-row]');
       if (rm) {
@@ -155,7 +135,32 @@
     update();
   }
 
-  // ---- 商品登録：選んだ画像のプレビュー
+  // ---- グッズ確認欄：「この名前で入力」（商品名だけを依頼欄に写す。個数・価格は依頼者が入力）
+  document.addEventListener('click', function (ev) {
+    var btn = ev.target.closest('[data-use-name]');
+    if (!btn) return;
+    var form = document.querySelector('form[data-entry-form] [data-rows]');
+    if (!form) return;
+    var target = null;
+    form.querySelectorAll('input[name$="[item_name]"]').forEach(function (inp) { if (!target && inp.value.trim() === '') target = inp; });
+    if (!target) {
+      var add = form.closest('form').querySelector('[data-add-row]');
+      if (add) add.click();
+      var all = form.querySelectorAll('input[name$="[item_name]"]');
+      target = all[all.length - 1];
+    }
+    if (!target) return;
+    target.value = btn.getAttribute('data-use-name');
+    target.dispatchEvent(new Event('input', { bubbles: true }));
+    var row = target.closest('[data-entry-row]');
+    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    var next = row.querySelector('[data-qty]') || target;
+    setTimeout(function () { next.focus(); next.select && next.select(); }, 350);
+    row.classList.add('flash-row');
+    setTimeout(function () { row.classList.remove('flash-row'); }, 1500);
+  });
+
+  // ---- 参考画像の登録：選んだ画像のプレビュー
   document.querySelectorAll('[data-image-input]').forEach(function (inp) {
     var prev = inp.closest('form').querySelector('[data-image-preview]');
     inp.addEventListener('change', function () {

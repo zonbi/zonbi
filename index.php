@@ -97,10 +97,14 @@ render_header(config('app_name', '代行さん'));
     <label>説明・注意事項
       <textarea name="description" rows="4" maxlength="2000" placeholder="例: 1人3点まで。売り切れの場合はご了承ください。受け取り方法は個別に連絡します。"><?= h($form['description']) ?></textarea>
     </label>
-    <label>イベントURL（任意）
-      <span class="field-help" id="event-url-help">場所やイベント限定グッズを購入しにいく場合は、場所やイベントのURLが分かりましたら入力してください。</span>
-      <input type="url" name="event_url" value="<?= h($form['event_url']) ?>" aria-describedby="event-url-help" maxlength="500" inputmode="url" placeholder="例: https://example.com/event/popup">
-    </label>
+    <fieldset class="goods-fieldset">
+      <legend>グッズ確認欄（任意）</legend>
+      <label>イベントURL（任意）
+        <span class="field-help" id="event-url-help">場所やイベント限定グッズを購入しにいく場合は、場所やイベントのURLが分かりましたら入力してください。</span>
+        <input type="url" name="event_url" value="<?= h($form['event_url']) ?>" aria-describedby="event-url-help" maxlength="500" inputmode="url" placeholder="例: https://example.com/event/popup">
+      </label>
+      <p class="small muted">参考画像は、作成後に管理ページの「グッズ確認欄」から追加できます。</p>
+    </fieldset>
     <label>受付締切（任意）
       <input type="datetime-local" name="deadline" value="<?= h($form['deadline']) ?>">
     </label>
